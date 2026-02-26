@@ -1,0 +1,10 @@
+import express from 'express';
+import { startInterview, submitAnswer, evaluateInterview, getInterviews, getAllCandidates } from '../controllers/interviewController.js';
+import { protect, recruiter } from '../middleware/authMiddleware.js';
+const router = express.Router();
+router.post('/start', protect, startInterview);
+router.post('/submit', protect, submitAnswer);
+router.post('/evaluate/:interviewId', protect, evaluateInterview);
+router.get('/history', protect, getInterviews);
+router.get('/admin/candidates', protect, recruiter, getAllCandidates);
+export default router;
