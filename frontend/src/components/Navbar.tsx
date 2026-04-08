@@ -1,11 +1,22 @@
-import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Cpu, User, LogOut, LayoutDashboard } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Cpu, LogOut, LayoutDashboard, User } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { motion } from 'framer-motion';
 
 const Navbar: React.FC = () => {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
+    const location = useLocation();
+    const [isScrolled, setIsScrolled] = useState(false);
+
+    useEffect(() => {
+        const handleScroll = () => {
+            setIsScrolled(window.scrollY > 20);
+        };
+        window.addEventListener('scroll', handleScroll);
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
 
     const handleLogout = () => {
         logout();
@@ -13,54 +24,88 @@ const Navbar: React.FC = () => {
     };
 
     return (
-        <nav className="glass" style={{
+        <nav style={{
             position: 'fixed',
-            top: '20px',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            width: '90%',
-            maxWidth: '1200px',
-            padding: '12px 24px',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
+            top: 0,
+            left: 0,
+            right: 0,
             zIndex: 1000,
-            margin: '0 auto'
+            height: '80px',
+            display: 'flex',
+            alignItems: 'center',
+            transition: 'all 0.3s ease',
+            background: isScrolled ? 'rgba(5, 8, 16, 0.8)' : 'transparent',
+            backdropFilter: isScrolled ? 'blur(20px)' : 'none',
+            borderBottom: isScrolled ? '1px solid var(--border)' : 'none',
         }}>
-            <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '1.5rem', fontWeight: '800', fontFamily: 'var(--font-outfit)' }}>
-                <Cpu size={32} color="var(--color-primary)" />
-                <span style={{ background: 'linear-gradient(to right, #fff, var(--color-primary))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                    HireMind AI
-                </span>
-            </Link>
+            <div className="container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Link to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span style={{
+                        fontSize: '1.5rem',
+                        fontWeight: 800,
+                        color: 'white',
+                        fontFamily: 'var(--font-main)',
+                        letterSpacing: '-0.02em'
+                    }}>
+                        HireMind <span style={{ color: 'var(--accent-cyan)' }}>AI</span>
+                    </span>
+                </Link>
 
-            <div style={{ display: 'flex', gap: '24px', alignItems: 'center' }}>
-                {user ? (
-                    <>
-                        <Link to="/dashboard" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.95rem', fontWeight: '500' }}>
-                            <LayoutDashboard size={18} />
-                            <span>Dashboard</span>
-                        </Link>
-                        <div style={{ height: '24px', width: '1px', background: 'var(--color-border)' }}></div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--color-primary), var(--color-secondary))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '0.8rem' }}>
-                                    {user.name.charAt(0).toUpperCase()}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
+                    {user ? (
+                        <>
+                            <Link to="/dashboard" style={{
+                                textDecoration: 'none',
+                                color: location.pathname === '/dashboard' ? 'white' : 'var(--text-secondary)',
+                                fontWeight: 600,
+                                fontSize: '0.9rem',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                transition: 'color 0.2s ease'
+                            }}>
+                                <LayoutDashboard size={18} />
+                                Dashboard
+                            </Link>
+
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', paddingLeft: '16px', borderLeft: '1px solid var(--border)' }}>
+                                <div style={{ textAlign: 'right' }}>
+                                    <div style={{ color: 'white', fontSize: '0.85rem', fontWeight: 700 }}>{user.name}</div>
+                                    <div style={{ color: 'var(--accent-gold)', fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Pro Member</div>
                                 </div>
-                                <span style={{ fontSize: '0.9rem', fontWeight: '600' }}>{user.name}</span>
+                                <button onClick={handleLogout} style={{
+                                    background: 'rgba(239, 68, 68, 0.1)',
+                                    border: '1px solid rgba(239, 68, 68, 0.2)',
+                                    color: '#ef4444',
+                                    width: '36px',
+                                    height: '36px',
+                                    borderRadius: '50%',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s ease'
+                                }}>
+                                    <LogOut size={16} />
+                                </button>
                             </div>
-                            <button onClick={handleLogout} style={{ background: 'transparent', color: '#ef4444', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.9rem', padding: '4px 8px' }}>
-                                <LogOut size={18} />
-                                <span>Logout</span>
-                            </button>
-                        </div>
-                    </>
-                ) : (
-                    <>
-                        <Link to="/login" style={{ fontSize: '0.95rem', fontWeight: '500' }}>Login</Link>
-                        <Link to="/register" className="btn-primary" style={{ fontSize: '0.9rem', padding: '8px 20px' }}>Join Free</Link>
-                    </>
-                )}
+                        </>
+                    ) : (
+                        <>
+                            <Link to="/login" style={{
+                                textDecoration: 'none',
+                                color: 'var(--text-primary)',
+                                fontWeight: 600,
+                                fontSize: '0.9rem'
+                            }}>
+                                Sign In
+                            </Link>
+                            <Link to="/register" className="btn-primary" style={{ padding: '10px 24px', fontSize: '0.9rem' }}>
+                                Get Started
+                            </Link>
+                        </>
+                    )}
+                </div>
             </div>
         </nav>
     );

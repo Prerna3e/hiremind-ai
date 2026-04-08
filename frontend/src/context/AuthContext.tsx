@@ -35,17 +35,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const { data } = await axios.post('http://localhost:5000/api/auth/login', { email, password });
         setUser(data);
         localStorage.setItem('userInfo', JSON.stringify(data));
+        localStorage.setItem('token', data.token);
     };
 
     const register = async (name: string, email: string, password: string) => {
         const { data } = await axios.post('http://localhost:5000/api/auth/register', { name, email, password });
         setUser(data);
         localStorage.setItem('userInfo', JSON.stringify(data));
+        localStorage.setItem('token', data.token);
     };
 
     const logout = () => {
         setUser(null);
         localStorage.removeItem('userInfo');
+        localStorage.removeItem('token');
     };
 
     return (

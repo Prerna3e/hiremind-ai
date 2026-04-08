@@ -13,6 +13,7 @@ const router = express.Router();
 router.post('/start', protect, startInterview);
 router.post('/submit', protect, submitAnswer);
 router.post('/evaluate/:interviewId', protect, evaluateInterview);
+router.get('/', protect, getInterviews);
 router.get('/history', protect, getInterviews);
 router.get('/admin/candidates', protect, recruiter, getAllCandidates);
 
