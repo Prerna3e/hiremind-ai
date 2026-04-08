@@ -1,8 +1,8 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import {
-    ChevronRight, CheckCircle2, Briefcase, Code2, Users, Zap, Target,
-    Cpu, MessageSquare, Sparkles, Gauge
+    ChevronRight, CheckCircle2, Briefcase, Code2, Users, Target,
+    Sparkles, Gauge
 } from 'lucide-react';
 import type { InterviewSetupData } from '../hooks/useInterview';
 

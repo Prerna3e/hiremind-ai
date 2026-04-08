@@ -3,8 +3,8 @@ import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import {
     Plus, History, BarChart2, Star,
-    ArrowRight, Flame, Trophy, Activity,
-    LayoutDashboard, User, Settings, LogOut, ChevronRight
+    Flame, Trophy, Activity,
+    LayoutDashboard, ChevronRight
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';

@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import {
     Zap, Target, Mic, ArrowRight, Play, Star,
-    ShieldCheck, BarChart3, Users
+    BarChart3, Users
 } from 'lucide-react';
 
 const LandingPage: React.FC = () => {
