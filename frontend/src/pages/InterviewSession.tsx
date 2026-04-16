@@ -3,9 +3,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     Send, Mic, MicOff, Volume2, VolumeX,
     ChevronRight, Sparkles, AlertCircle,
-    ThumbsUp, Lightbulb
+    ThumbsUp, Lightbulb, Clock, Code as CodeIcon,
+    Maximize2, Play, Terminal
 } from 'lucide-react';
 import type { Scores, ScoreDelta, Feedback } from '../hooks/useInterview';
+import FuturisticLayout from '../components/FuturisticLayout';
+import robotAvatar from '../assets/robot-avatar.png';
 
 interface InterviewSessionProps {
     currentQuestion: string;
@@ -34,47 +37,28 @@ interface InterviewSessionProps {
 }
 
 // ═══════════════════════════════════════════════════════════
-// SCORE BAR COMPONENT
+// UI COMPONENTS
 // ═══════════════════════════════════════════════════════════
 
-const ScoreBar = ({ label, value, color, delta }: {
+const GlowingScoreBar = ({ label, value, color, delta }: {
     label: string; value: number; color: string; delta: number | null;
 }) => (
-    <div style={{ marginBottom: '16px' }}>
+    <div style={{ marginBottom: '20px' }}>
         <div style={{
             display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            marginBottom: '8px',
+            marginBottom: '10px',
         }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'var(--font-futuristic)' }}>
                 {label}
             </span>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '0.9rem', fontWeight: 800, color: 'white', fontFamily: 'var(--font-mono)' }}>
-                    {value}
+                <span style={{ fontSize: '1rem', fontWeight: 900, color: 'white', fontFamily: 'var(--font-mono)' }}>
+                    {value}%
                 </span>
-                <AnimatePresence>
-                    {delta !== null && delta !== 0 && (
-                        <motion.span
-                            initial={{ opacity: 0, y: -10, scale: 0.5 }}
-                            animate={{ opacity: 1, y: 0, scale: 1 }}
-                            exit={{ opacity: 0, y: 10 }}
-                            transition={{ type: 'spring', stiffness: 500, damping: 25 }}
-                            style={{
-                                fontSize: '0.7rem', fontWeight: 800,
-                                color: delta > 0 ? '#22c55e' : '#ef4444',
-                                background: delta > 0 ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)',
-                                padding: '2px 8px', borderRadius: '100px',
-                                fontFamily: 'var(--font-mono)',
-                            }}
-                        >
-                            {delta > 0 ? `+${delta}` : delta}
-                        </motion.span>
-                    )}
-                </AnimatePresence>
             </div>
         </div>
         <div style={{
-            height: '6px', background: 'rgba(255,255,255,0.05)', borderRadius: '10px',
+            height: '4px', background: 'rgba(255,255,255,0.05)', borderRadius: '10px',
             overflow: 'hidden', position: 'relative',
         }}>
             <motion.div
@@ -83,505 +67,370 @@ const ScoreBar = ({ label, value, color, delta }: {
                 transition={{ type: 'spring', stiffness: 100, damping: 20 }}
                 style={{
                     height: '100%', background: color, borderRadius: '10px',
-                    boxShadow: `0 0 12px ${color}40`,
+                    boxShadow: `0 0 15px ${color}`,
                 }}
             />
         </div>
     </div>
 );
 
-// ═══════════════════════════════════════════════════════════
-// THINKING SKELETON
-// ═══════════════════════════════════════════════════════════
+const Timer = () => {
+    const [seconds, setSeconds] = useState(0);
+    useEffect(() => {
+        const interval = setInterval(() => setSeconds(s => s + 1), 1000);
+        return () => clearInterval(interval);
+    }, []);
 
-const ThinkingSkeleton = () => (
-    <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '8px 0' }}
-    >
-        <div style={{
-            display: 'flex', alignItems: 'center', gap: '10px',
-            color: 'var(--accent-cyan)', fontSize: '0.8rem', fontWeight: 700,
-        }}>
-            <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}
-            >
-                <Sparkles size={16} />
-            </motion.div>
-            Maya is thinking...
+    const formatTime = (s: number) => {
+        const mins = Math.floor(s / 60);
+        const secs = s % 60;
+        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    };
+
+    return (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--accent-gold)', fontWeight: 800, fontFamily: 'var(--font-mono)' }}>
+            <Clock size={16} />
+            <span>{formatTime(seconds)}</span>
         </div>
-        {[80, 60, 40].map((w, i) => (
-            <div key={i} className="shimmer" style={{
-                height: '14px', width: `${w}%`, borderRadius: '8px',
-            }} />
-        ))}
-    </motion.div>
-);
+    );
+};
 
 // ═══════════════════════════════════════════════════════════
 // MAIN SESSION COMPONENT
 // ═══════════════════════════════════════════════════════════
 
-const InterviewSession: React.FC<InterviewSessionProps> = ({
-    currentQuestion, questionNumber, totalQuestions, scores, lastScoreDelta,
-    lastFeedback, showFeedback, loading, error, onSubmitAnswer, onProceedToNext,
-    onDismissError, isListening, isSpeaking, transcript, startListening,
-    stopListening, speak, stopSpeaking, resetTranscript, voiceSupported, setupData,
-}) => {
+const InterviewSession: React.FC<InterviewSessionProps> = (props) => {
+    const {
+        currentQuestion, questionNumber, totalQuestions, scores, lastScoreDelta,
+        lastFeedback, showFeedback, loading, error, onSubmitAnswer, onProceedToNext,
+        onDismissError, isListening, isSpeaking, transcript, startListening,
+        stopListening, speak, stopSpeaking, resetTranscript, voiceSupported, setupData,
+    } = props;
+
     const [typedAnswer, setTypedAnswer] = useState('');
     const [voiceEnabled, setVoiceEnabled] = useState(true);
-    const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const [showCode, setShowCode] = useState(false);
     const hasSpokenRef = useRef('');
 
-    // Speak the question aloud when it changes
     useEffect(() => {
         if (currentQuestion && voiceEnabled && currentQuestion !== hasSpokenRef.current) {
             hasSpokenRef.current = currentQuestion;
             speak(currentQuestion);
         }
-    }, [currentQuestion]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [currentQuestion, voiceEnabled, speak]);
 
-    // Sync voice transcript to typed answer
     useEffect(() => {
-        if (transcript) {
-            setTypedAnswer(transcript);
-        }
+        if (transcript) setTypedAnswer(transcript);
     }, [transcript]);
 
     const handleSubmit = async () => {
         const answer = typedAnswer.trim();
         if (!answer || loading) return;
-        stopListening();
         await onSubmitAnswer(answer);
         setTypedAnswer('');
         resetTranscript();
     };
 
-    const handleKeyDown = (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            handleSubmit();
-        }
-    };
-
-    const toggleVoice = () => {
-        if (isListening) {
-            stopListening();
-        } else {
-            startListening();
-        }
-    };
-
-    const progressPercent = (questionNumber / totalQuestions) * 100;
     const overallScore = Math.round(scores.technical * 0.4 + scores.communication * 0.3 + scores.confidence * 0.3);
 
     return (
-        <motion.div
-            key="interview"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            style={{ maxWidth: '1200px', margin: '0 auto', paddingBottom: '40px' }}
-        >
-            {/* Progress Bar */}
-            <div style={{ marginBottom: '32px' }}>
-                <div style={{
-                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                    marginBottom: '10px',
-                }}>
-                    <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
-                        Question {questionNumber} of {totalQuestions}
-                    </span>
-                    <span style={{
-                        fontSize: '0.8rem', fontWeight: 800, color: 'var(--accent-cyan)',
-                        fontFamily: 'var(--font-mono)',
-                    }}>
-                        {Math.round(progressPercent)}%
-                    </span>
+        <FuturisticLayout>
+            <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+                
+                {/* Header Stats */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
+                    <div style={{ display: 'flex', gap: '40px' }}>
+                        <div>
+                            <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 800, marginBottom: '5px' }}>INTERVIEW TYPE</div>
+                            <div style={{ color: 'white', fontWeight: 700, fontFamily: 'var(--font-futuristic)', fontSize: '0.9rem' }}>{setupData.interviewType.toUpperCase()}</div>
+                        </div>
+                        <div>
+                            <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 800, marginBottom: '5px' }}>TARGET ROLE</div>
+                            <div style={{ color: 'white', fontWeight: 700, fontFamily: 'var(--font-futuristic)', fontSize: '0.9rem' }}>{setupData.role.toUpperCase()}</div>
+                        </div>
+                    </div>
+                    
+                    <div className="glass" style={{ padding: '10px 20px', borderRadius: '12px', border: '1px solid rgba(245, 158, 11, 0.2)' }}>
+                        <Timer />
+                    </div>
                 </div>
-                <div style={{
-                    height: '4px', background: 'rgba(255,255,255,0.05)', borderRadius: '10px',
-                    overflow: 'hidden',
-                }}>
-                    <motion.div
-                        initial={false}
-                        animate={{ width: `${progressPercent}%` }}
-                        transition={{ type: 'spring', stiffness: 100, damping: 25 }}
-                        style={{
-                            height: '100%',
-                            background: 'linear-gradient(90deg, var(--accent-blue), var(--accent-cyan))',
-                            borderRadius: '10px',
-                        }}
-                    />
-                </div>
-            </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '28px' }}>
-                {/* Main Panel */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                    {/* Question Card */}
-                    <AnimatePresence mode="wait">
-                        <motion.div
-                            key={currentQuestion}
-                            initial={{ opacity: 0, x: 40 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: -40 }}
-                            transition={{ type: 'spring', stiffness: 200, damping: 25 }}
-                            className="glass"
-                            style={{
-                                padding: '36px', borderRadius: '24px',
-                                borderLeft: '4px solid var(--accent-blue)',
-                                position: 'relative',
-                            }}
-                        >
-                            <div style={{
-                                display: 'flex', alignItems: 'center', gap: '10px',
-                                marginBottom: '16px',
-                            }}>
-                                <div style={{
-                                    width: '32px', height: '32px', borderRadius: '50%',
-                                    background: 'linear-gradient(135deg, var(--accent-blue), var(--accent-cyan))',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    fontSize: '0.7rem', fontWeight: 900, color: '#050810',
-                                }}>
-                                    M
-                                </div>
-                                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--accent-blue)' }}>
-                                    Maya — AI Interviewer
-                                </span>
-                                {isSpeaking && (
-                                    <motion.div
-                                        animate={{ opacity: [1, 0.4, 1] }}
-                                        transition={{ duration: 1, repeat: Infinity }}
+                <div style={{ display: 'grid', gridTemplateColumns: showCode ? '1fr 1fr' : '1fr 350px', gap: '30px', alignItems: 'start' }}>
+                    
+                    {/* Left: AI Avatar & Chat Panel */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '30px', alignItems: 'center' }}>
+                        
+                        {/* Robot Avatar Area */}
+                        <div style={{ position: 'relative', marginBottom: '20px' }}>
+                            <div style={{ 
+                                position: 'absolute', inset: -20, 
+                                background: 'radial-gradient(circle, rgba(59, 123, 246, 0.15), transparent 70%)',
+                                borderRadius: '50%', zIndex: -1
+                            }}></div>
+                            <motion.div 
+                                className="robot-avatar"
+                                style={{
+                                    width: '180px', height: '180px', borderRadius: '50%',
+                                    border: '2px solid rgba(59, 123, 246, 0.3)',
+                                    padding: '5px', background: 'rgba(5, 8, 16, 0.8)',
+                                    boxShadow: '0 0 30px rgba(59, 123, 246, 0.2)',
+                                    overflow: 'hidden'
+                                }}
+                            >
+                                <img 
+                                    src={robotAvatar} 
+                                    alt="AI Assistant" 
+                                    style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} 
+                                />
+                            </motion.div>
+                            
+                            {/* Listening Status Orb */}
+                            <AnimatePresence>
+                                {isListening && (
+                                    <motion.div 
+                                        initial={{ scale: 0 }}
+                                        animate={{ scale: 1 }}
+                                        exit={{ scale: 0 }}
                                         style={{
-                                            display: 'flex', alignItems: 'center', gap: '4px',
-                                            padding: '3px 10px', borderRadius: '100px',
-                                            background: 'rgba(6,214,199,0.1)', fontSize: '0.65rem',
-                                            fontWeight: 800, color: 'var(--accent-cyan)',
+                                            position: 'absolute', bottom: '10px', right: '10px',
+                                            width: '40px', height: '40px', borderRadius: '50%',
+                                            background: 'var(--accent-cyan)', display: 'flex', alignItems: 'center',
+                                            justifyContent: 'center', color: 'black', boxShadow: '0 0 20px var(--accent-cyan)'
                                         }}
                                     >
-                                        <Volume2 size={12} /> Speaking
+                                        <Mic size={18} />
                                     </motion.div>
                                 )}
-                            </div>
-                            {loading && !showFeedback ? (
-                                <ThinkingSkeleton />
-                            ) : (
-                                <p style={{
-                                    fontSize: '1.25rem', fontWeight: 500, lineHeight: 1.6,
-                                    color: 'var(--text-primary)',
-                                }}>
-                                    {currentQuestion}
-                                </p>
-                            )}
-                        </motion.div>
-                    </AnimatePresence>
-
-                    {/* Answer Area */}
-                    {!showFeedback && (
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="glass"
-                            style={{ padding: '24px', borderRadius: '20px' }}
-                        >
-                            <div style={{
-                                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                                marginBottom: '12px',
-                            }}>
-                                <span style={{
-                                    fontSize: '0.7rem', fontWeight: 800, color: 'var(--text-muted)',
-                                    textTransform: 'uppercase', letterSpacing: '0.1em',
-                                }}>
-                                    {isListening ? '🎙️ Listening — speak your answer...' : 'Your Answer'}
-                                </span>
-                                {voiceSupported && (
-                                    <div style={{ display: 'flex', gap: '8px' }}>
-                                        <button
-                                            onClick={() => { setVoiceEnabled(!voiceEnabled); if (isSpeaking) stopSpeaking(); }}
-                                            style={{
-                                                width: '34px', height: '34px', borderRadius: '10px',
-                                                background: voiceEnabled ? 'rgba(59,123,246,0.1)' : 'rgba(239,68,68,0.1)',
-                                                border: `1px solid ${voiceEnabled ? 'rgba(59,123,246,0.3)' : 'rgba(239,68,68,0.3)'}`,
-                                                color: voiceEnabled ? 'var(--accent-blue)' : '#ef4444',
-                                                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                            }}
-                                            title={voiceEnabled ? 'AI voice on' : 'AI voice off'}
-                                        >
-                                            {voiceEnabled ? <Volume2 size={14} /> : <VolumeX size={14} />}
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-                            <textarea
-                                ref={textareaRef}
-                                value={typedAnswer}
-                                onChange={e => setTypedAnswer(e.target.value)}
-                                onKeyDown={handleKeyDown}
-                                placeholder="Type your answer here or click the mic to speak..."
-                                disabled={loading || isSpeaking}
-                                style={{
-                                    width: '100%', minHeight: '120px', maxHeight: '200px',
-                                    background: 'transparent', border: 'none', outline: 'none',
-                                    color: 'var(--text-primary)', fontSize: '1.1rem', fontFamily: 'var(--font-main)',
-                                    lineHeight: 1.6, resize: 'vertical',
-                                }}
-                            />
-                            <div style={{
-                                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                                marginTop: '12px', paddingTop: '12px',
-                                borderTop: '1px solid var(--border)',
-                            }}>
-                                <div style={{ display: 'flex', gap: '8px' }}>
-                                    {voiceSupported && (
-                                        <motion.button
-                                            whileTap={{ scale: 0.9 }}
-                                            onClick={toggleVoice}
-                                            disabled={loading || isSpeaking}
-                                            style={{
-                                                width: '48px', height: '48px', borderRadius: '50%',
-                                                background: isListening ? 'var(--accent-cyan)' : 'var(--bg-tertiary)',
-                                                border: `1px solid ${isListening ? 'var(--accent-cyan)' : 'var(--border)'}`,
-                                                color: isListening ? '#050810' : 'var(--text-secondary)',
-                                                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                boxShadow: isListening ? '0 0 20px rgba(6,214,199,0.4)' : 'none',
-                                                transition: 'all 0.2s ease', position: 'relative',
-                                            }}
-                                        >
-                                            {isListening && (
-                                                <motion.div
-                                                    animate={{ scale: [1, 1.5], opacity: [0.4, 0] }}
-                                                    transition={{ duration: 1, repeat: Infinity }}
-                                                    style={{
-                                                        position: 'absolute', inset: -6, borderRadius: '50%',
-                                                        background: 'var(--accent-cyan)',
-                                                    }}
-                                                />
-                                            )}
-                                            {isListening ? <MicOff size={20} /> : <Mic size={20} />}
-                                        </motion.button>
-                                    )}
-                                </div>
-                                <motion.button
-                                    whileHover={{ scale: 1.03 }}
-                                    whileTap={{ scale: 0.97 }}
-                                    onClick={handleSubmit}
-                                    disabled={loading || !typedAnswer.trim() || isSpeaking}
-                                    className="btn-primary"
-                                    style={{
-                                        padding: '12px 28px', fontSize: '0.95rem',
-                                        opacity: (!typedAnswer.trim() || loading) ? 0.5 : 1,
-                                    }}
-                                >
-                                    {loading ? (
-                                        <motion.div
-                                            animate={{ rotate: 360 }}
-                                            transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                                            style={{ width: '20px', height: '20px', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: 'white', borderRadius: '50%' }}
-                                        />
-                                    ) : (
-                                        <>Submit <Send size={16} /></>
-                                    )}
-                                </motion.button>
-                            </div>
-                        </motion.div>
-                    )}
-
-                    {/* Feedback Card */}
-                    <AnimatePresence>
-                        {showFeedback && lastFeedback && (
-                            <motion.div
-                                initial={{ opacity: 0, y: 30 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -20 }}
-                                transition={{ type: 'spring', stiffness: 200, damping: 25 }}
-                                className="glass"
-                                style={{
-                                    padding: '28px', borderRadius: '20px',
-                                    borderLeft: '4px solid var(--accent-cyan)',
-                                }}
-                            >
-                                <div style={{
-                                    fontSize: '0.7rem', fontWeight: 800, color: 'var(--accent-cyan)',
-                                    textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '16px',
-                                }}>
-                                    Instant Feedback
-                                </div>
-
-                                {lastFeedback.positive && (
-                                    <div style={{
-                                        display: 'flex', gap: '10px', marginBottom: '12px',
-                                        padding: '12px 14px', borderRadius: '12px',
-                                        background: 'rgba(34, 197, 94, 0.06)',
-                                        border: '1px solid rgba(34, 197, 94, 0.12)',
-                                    }}>
-                                        <ThumbsUp size={16} color="#22c55e" style={{ flexShrink: 0, marginTop: '2px' }} />
-                                        <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                                            {lastFeedback.positive}
-                                        </p>
-                                    </div>
-                                )}
-
-                                {lastFeedback.improvement && (
-                                    <div style={{
-                                        display: 'flex', gap: '10px', marginBottom: '16px',
-                                        padding: '12px 14px', borderRadius: '12px',
-                                        background: 'rgba(245, 158, 11, 0.06)',
-                                        border: '1px solid rgba(245, 158, 11, 0.12)',
-                                    }}>
-                                        <Lightbulb size={16} color="#f59e0b" style={{ flexShrink: 0, marginTop: '2px' }} />
-                                        <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                                            {lastFeedback.improvement}
-                                        </p>
-                                    </div>
-                                )}
-
-                                <motion.button
-                                    whileHover={{ scale: 1.02 }}
-                                    whileTap={{ scale: 0.97 }}
-                                    onClick={onProceedToNext}
-                                    className="btn-primary"
-                                    style={{
-                                        width: '100%', height: '52px', fontSize: '1rem',
-                                        background: 'linear-gradient(135deg, var(--accent-blue), var(--accent-cyan))',
-                                    }}
-                                >
-                                    Next Question <ChevronRight size={18} />
-                                </motion.button>
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
-
-                    {/* Error */}
-                    <AnimatePresence>
-                        {error && (
-                            <motion.div
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0 }}
-                                style={{
-                                    padding: '16px 20px', borderRadius: '14px',
-                                    background: 'rgba(239, 68, 68, 0.08)',
-                                    border: '1px solid rgba(239, 68, 68, 0.2)',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                                }}
-                            >
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#ef4444' }}>
-                                    <AlertCircle size={18} />
-                                    <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>{error}</span>
-                                </div>
-                                <button
-                                    onClick={onDismissError}
-                                    style={{
-                                        background: 'rgba(239,68,68,0.2)', border: 'none',
-                                        color: '#ef4444', padding: '6px 14px', borderRadius: '8px',
-                                        cursor: 'pointer', fontWeight: 700, fontSize: '0.8rem',
-                                    }}
-                                >
-                                    Dismiss
-                                </button>
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
-                </div>
-
-                {/* Sidebar — Live Scores */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                    {/* Overall Score */}
-                    <div className="glass" style={{
-                        padding: '28px', borderRadius: '20px', textAlign: 'center',
-                    }}>
-                        <div style={{
-                            fontSize: '0.7rem', fontWeight: 800, color: 'var(--text-muted)',
-                            textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '12px',
-                        }}>
-                            Overall Score
+                            </AnimatePresence>
                         </div>
-                        <motion.div
-                            key={overallScore}
-                            initial={{ scale: 0.8 }}
-                            animate={{ scale: 1 }}
-                            transition={{ type: 'spring', stiffness: 300, damping: 15 }}
+
+                        {/* Question Bubble */}
+                        <motion.div 
+                            key={currentQuestion}
+                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            className="glass"
                             style={{
-                                fontSize: '3.5rem', fontWeight: 900, color: 'white',
-                                fontFamily: 'var(--font-mono)', lineHeight: 1,
+                                width: '100%', padding: '40px', borderRadius: '30px',
+                                background: 'rgba(12, 18, 32, 0.6)', border: '1px solid rgba(59, 123, 246, 0.2)',
+                                textAlign: 'center', position: 'relative'
                             }}
                         >
-                            {overallScore}
+                            <div style={{ 
+                                position: 'absolute', top: '-12px', left: '50%', transform: 'translateX(-50%)',
+                                background: 'var(--accent-blue)', color: 'white', padding: '4px 15px', borderRadius: '20px',
+                                fontSize: '0.65rem', fontWeight: 900, fontFamily: 'var(--font-futuristic)', letterSpacing: '1px'
+                            }}>
+                                INCOMING QUESTION
+                            </div>
+
+                            <p style={{ fontSize: '1.4rem', color: 'white', lineHeight: 1.6, fontWeight: 500 }}>
+                                {loading && !showFeedback ? "Processing response..." : currentQuestion}
+                            </p>
+
+                            {isSpeaking && (
+                                <div style={{ display: 'flex', justifyContent: 'center', gap: '4px', marginTop: '20px' }}>
+                                    {[1, 2, 3, 4, 1, 2, 3].map((h, i) => (
+                                        <motion.div 
+                                            key={i}
+                                            animate={{ height: [8, 20, 8] }}
+                                            transition={{ duration: 0.5, repeat: Infinity, delay: i * 0.1 }}
+                                            style={{ width: '4px', background: 'var(--accent-cyan)', borderRadius: '2px' }}
+                                        />
+                                    ))}
+                                </div>
+                            )}
                         </motion.div>
-                        <div style={{
-                            height: '6px', background: 'rgba(255,255,255,0.05)', borderRadius: '10px',
-                            marginTop: '16px', overflow: 'hidden',
-                        }}>
-                            <motion.div
-                                initial={false}
-                                animate={{ width: `${overallScore}%` }}
-                                transition={{ type: 'spring', stiffness: 100, damping: 20 }}
-                                style={{
-                                    height: '100%',
-                                    background: overallScore >= 70
-                                        ? 'linear-gradient(90deg, #22c55e, #06D6C7)'
-                                        : overallScore >= 50
-                                            ? 'linear-gradient(90deg, #f59e0b, #fbbf24)'
-                                            : 'linear-gradient(90deg, #ef4444, #f87171)',
-                                    borderRadius: '10px',
-                                }}
-                            />
+
+                        {/* Input Area */}
+                        <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                            <div className="glass" style={{ 
+                                padding: '10px', borderRadius: '20px', 
+                                border: isListening ? '1px solid var(--accent-cyan)' : '1px solid var(--border)',
+                                transition: 'all 0.3s ease'
+                            }}>
+                                <textarea 
+                                    value={typedAnswer}
+                                    onChange={e => setTypedAnswer(e.target.value)}
+                                    placeholder={isListening ? "I'm listening..." : "Type your answer or use voice input..."}
+                                    style={{
+                                        width: '100%', background: 'transparent', border: 'none', color: 'white',
+                                        padding: '15px', minHeight: '100px', fontSize: '1.1rem', outline: 'none',
+                                        resize: 'none'
+                                    }}
+                                />
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px' }}>
+                                    <div style={{ display: 'flex', gap: '10px' }}>
+                                        <motion.button 
+                                            whileTap={{ scale: 0.9 }}
+                                            onClick={isListening ? stopListening : startListening}
+                                            className={isListening ? "btn-mic-active" : ""}
+                                            style={{
+                                                width: '50px', height: '50px', borderRadius: '50%',
+                                                background: 'var(--bg-tertiary)', border: 'none', cursor: 'pointer',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white'
+                                            }}
+                                        >
+                                            {isListening ? <MicOff size={20} /> : <Mic size={20} />}
+                                        </motion.button>
+                                        <button 
+                                            onClick={() => setShowCode(!showCode)}
+                                            style={{
+                                                width: '50px', height: '50px', borderRadius: '50%',
+                                                background: showCode ? 'rgba(139, 92, 246, 0.2)' : 'var(--bg-tertiary)', 
+                                                border: 'none', cursor: 'pointer',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                                                color: showCode ? 'var(--accent-purple)' : 'white'
+                                            }}
+                                        >
+                                            <CodeIcon size={20} />
+                                        </button>
+                                    </div>
+                                    <motion.button 
+                                        whileHover={{ scale: 1.05 }}
+                                        whileTap={{ scale: 0.95 }}
+                                        onClick={handleSubmit}
+                                        disabled={loading || !typedAnswer.trim()}
+                                        style={{
+                                            background: 'linear-gradient(135deg, var(--accent-blue), var(--accent-cyan))',
+                                            color: 'black', padding: '0 30px', height: '50px', borderRadius: '15px',
+                                            fontWeight: 900, border: 'none', cursor: 'pointer',
+                                            fontFamily: 'var(--font-futuristic)', fontSize: '0.8rem', letterSpacing: '1px',
+                                            opacity: (loading || !typedAnswer.trim()) ? 0.5 : 1
+                                        }}
+                                    >
+                                        SUBMIT ANSWER
+                                    </motion.button>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    {/* Individual Scores */}
-                    <div className="glass" style={{ padding: '24px', borderRadius: '20px' }}>
-                        <div style={{
-                            fontSize: '0.7rem', fontWeight: 800, color: 'var(--text-muted)',
-                            textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '20px',
-                        }}>
-                            Live Assessment
-                        </div>
-                        <ScoreBar
-                            label="Technical Accuracy"
-                            value={scores.technical}
-                            color="var(--accent-blue)"
-                            delta={lastScoreDelta?.technical ?? null}
-                        />
-                        <ScoreBar
-                            label="Communication"
-                            value={scores.communication}
-                            color="var(--accent-cyan)"
-                            delta={lastScoreDelta?.communication ?? null}
-                        />
-                        <ScoreBar
-                            label="Confidence"
-                            value={scores.confidence}
-                            color="var(--accent-purple)"
-                            delta={lastScoreDelta?.confidence ?? null}
-                        />
-                    </div>
+                    {/* Right: Feedback & Live Analytics (or Code Editor) */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                        {showCode ? (
+                            <motion.div 
+                                initial={{ opacity: 0, x: 20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                className="glass"
+                                style={{ height: '600px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
+                            >
+                                <div style={{ padding: '15px 20px', background: 'rgba(0,0,0,0.3)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                        <Terminal size={14} color="var(--accent-cyan)" />
+                                        <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'white', fontFamily: 'var(--font-mono)' }}>solution.py</span>
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '15px' }}>
+                                        <button style={{ background: 'transparent', border: 'none', color: '#22c55e', display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.7rem', fontWeight: 800, cursor: 'pointer' }}>
+                                            <Play size={12} fill="#22c55e" /> RUN
+                                        </button>
+                                        <Maximize2 size={12} color="var(--text-muted)" />
+                                    </div>
+                                </div>
+                                <div style={{ flex: 1, background: '#050810', padding: '20px', fontFamily: 'var(--font-mono)', fontSize: '0.9rem', color: '#94A3B8', overflow: 'auto' }}>
+                                    <div style={{ color: '#8B5CF6' }}>def <span style={{ color: '#06D6C7' }}>solve_problem</span>(data):</div>
+                                    <div style={{ paddingLeft: '20px', color: '#475569' }}># Your futuristic code goes here...</div>
+                                    <div style={{ paddingLeft: '20px', color: '#F1F5F9' }}>result = []</div>
+                                    <div style={{ paddingLeft: '20px' }}>&nbsp;</div>
+                                    <div style={{ paddingLeft: '20px', color: '#8B5CF6' }}>for <span style={{ color: '#F1F5F9' }}>item</span> in <span style={{ color: '#F1F5F9' }}>data</span>:</div>
+                                    <div style={{ paddingLeft: '40px', color: '#F1F5F9' }}>process(item)</div>
+                                    <div style={{ paddingLeft: '20px' }}>&nbsp;</div>
+                                    <div style={{ paddingLeft: '20px', color: '#8B5CF6' }}>return <span style={{ color: '#F1F5F9' }}>result</span></div>
+                                </div>
+                            </motion.div>
+                        ) : (
+                            <>
+                                {/* Overall Confidence Metric */}
+                                <div className="glass neon-border" style={{ padding: '30px', borderRadius: '25px', textAlign: 'center' }}>
+                                    <div style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', fontWeight: 800, marginBottom: '15px' }}>OVERALL PERFORMANCE</div>
+                                    <div style={{ position: 'relative', display: 'inline-block' }}>
+                                        <svg width="120" height="120" viewBox="0 0 120 120">
+                                            <circle cx="60" cy="60" r="54" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="8" />
+                                            <motion.circle 
+                                                cx="60" cy="60" r="54" fill="none" 
+                                                stroke="var(--accent-cyan)" strokeWidth="8"
+                                                strokeDasharray="339.29"
+                                                initial={{ strokeDashoffset: 339.29 }}
+                                                animate={{ strokeDashoffset: 339.29 - (339.29 * overallScore / 100) }}
+                                                strokeLinecap="round"
+                                            />
+                                        </svg>
+                                        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                                            <div style={{ fontSize: '2rem', fontWeight: 900, color: 'white', fontFamily: 'var(--font-mono)' }}>{overallScore}</div>
+                                            <div style={{ fontSize: '0.6rem', color: 'var(--accent-cyan)', fontWeight: 800 }}>PTS</div>
+                                        </div>
+                                    </div>
+                                </div>
 
-                    {/* Interview Info */}
-                    <div className="glass" style={{ padding: '20px', borderRadius: '16px' }}>
-                        <div style={{
-                            fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)',
-                            textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '12px',
-                        }}>
-                            Session Info
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.85rem' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                <span style={{ color: 'var(--text-muted)' }}>Role</span>
-                                <span style={{ fontWeight: 700 }}>{setupData.role}</span>
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                <span style={{ color: 'var(--text-muted)' }}>Type</span>
-                                <span style={{ fontWeight: 700, textTransform: 'capitalize' }}>{setupData.interviewType}</span>
-                            </div>
-                        </div>
+                                {/* Live Assessment */}
+                                <div className="glass" style={{ padding: '25px', borderRadius: '25px' }}>
+                                    <div style={{ fontSize: '0.7rem', color: 'white', fontWeight: 800, marginBottom: '25px', fontFamily: 'var(--font-futuristic)', letterSpacing: '1px' }}>LIVE ANALYTICS</div>
+                                    <GlowingScoreBar label="Technical" value={scores.technical} color="var(--accent-blue)" delta={lastScoreDelta?.technical} />
+                                    <GlowingScoreBar label="Communication" value={scores.communication} color="var(--accent-cyan)" delta={lastScoreDelta?.communication} />
+                                    <GlowingScoreBar label="Confidence" value={scores.confidence} color="var(--accent-purple)" delta={lastScoreDelta?.confidence} />
+                                </div>
+
+                                {/* AI Insight Card */}
+                                <AnimatePresence>
+                                    {showFeedback && lastFeedback && (
+                                        <motion.div 
+                                            initial={{ opacity: 0, scale: 0.9 }}
+                                            animate={{ opacity: 1, scale: 1 }}
+                                            className="glass holographic-grid"
+                                            style={{
+                                                padding: '25px', borderRadius: '25px', 
+                                                border: '1px solid rgba(6, 214, 199, 0.3)',
+                                                background: 'linear-gradient(135deg, rgba(6, 214, 199, 0.05), transparent)'
+                                            }}
+                                        >
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px' }}>
+                                                <Sparkles size={16} color="var(--accent-cyan)" />
+                                                <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'white' }}>AI FEEDBACK</span>
+                                            </div>
+                                            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '20px' }}>
+                                                {lastFeedback.positive}
+                                            </p>
+                                            <button 
+                                                onClick={onProceedToNext}
+                                                style={{
+                                                    width: '100%', padding: '12px', borderRadius: '12px',
+                                                    background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)',
+                                                    color: 'white', fontWeight: 700, cursor: 'pointer',
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px'
+                                                }}
+                                            >
+                                                Next Challenge <ChevronRight size={16} />
+                                            </button>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                            </>
+                        )}
                     </div>
                 </div>
             </div>
-        </motion.div>
+
+            {/* Global Error Banner */}
+            <AnimatePresence>
+                {error && (
+                    <motion.div 
+                        initial={{ opacity: 0, y: 50 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0 }}
+                        style={{
+                            position: 'fixed', bottom: '30px', left: '50%', transform: 'translateX(-50%)',
+                            zIndex: 1000, background: 'rgba(239, 68, 68, 0.9)', backdropFilter: 'blur(10px)',
+                            padding: '12px 25px', borderRadius: '100px', display: 'flex', alignItems: 'center',
+                            gap: '15px', border: '1px solid #ef4444', color: 'white', boxShadow: '0 10px 30px rgba(0,0,0,0.5)'
+                        }}
+                    >
+                        <AlertCircle size={18} />
+                        <span style={{ fontWeight: 600 }}>{error}</span>
+                        <button onClick={onDismissError} style={{ background: 'white', border: 'none', color: '#ef4444', borderRadius: '50%', width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontWeight: 900 }}>×</button>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </FuturisticLayout>
     );
 };
 

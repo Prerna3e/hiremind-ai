@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Orbitron:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap');
 
 :root {
   /* Global Design Tokens */
@@ -19,6 +19,7 @@
 
   /* Typography */
   --font-main: 'Inter', sans-serif;
+  --font-futuristic: 'Orbitron', sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
 
   /* Spacing */
@@ -60,6 +61,10 @@ body {
   min-height: 100vh;
   overflow-x: hidden;
   color: var(--text-primary);
+  /* Circuit Pattern Background */
+  background-image: 
+    radial-gradient(circle at 50% 50%, rgba(59, 123, 246, 0.05), transparent 40%),
+    url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%233B7BF6' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
 }
 
 #root {
@@ -147,6 +152,45 @@ h5 {
 
 .speaking-glow {
   animation: pulse-accent 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.neon-border {
+  border: 1px solid var(--accent-blue);
+  box-shadow: 0 0 15px var(--glow-blue);
+}
+
+.neon-text {
+  color: var(--accent-cyan);
+  text-shadow: 0 0 10px var(--glow-cyan);
+}
+
+.hologram-grid {
+  background-image: linear-gradient(rgba(59, 123, 246, 0.1) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(59, 123, 246, 0.1) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+/* Voice Pulse Animation */
+@keyframes mic-pulse {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(6, 214, 199, 0.7); }
+  70% { transform: scale(1.1); box-shadow: 0 0 20px 10px rgba(6, 214, 199, 0); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(6, 214, 199, 0); }
+}
+
+.btn-mic-active {
+  animation: mic-pulse 1.5s infinite;
+  background: var(--accent-cyan) !important;
+  color: var(--bg-primary) !important;
+}
+
+/* Robot Face Breathing */
+@keyframes robot-breath {
+  0%, 100% { transform: scale(1) translateY(0); filter: brightness(1); }
+  50% { transform: scale(1.02) translateY(-5px); filter: brightness(1.2); }
+}
+
+.robot-avatar {
+  animation: robot-breath 3s ease-in-out infinite;
 }
 
 /* Scrollbar */
