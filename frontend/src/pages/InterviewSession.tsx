@@ -4,7 +4,7 @@ import {
     Send, Mic, MicOff, Volume2, VolumeX,
     ChevronRight, Sparkles, AlertCircle,
     ThumbsUp, Lightbulb, Clock, Code as CodeIcon,
-    Maximize2, Play, Terminal
+    Maximize2, Play, Terminal, TrendingUp, TrendingDown, Activity, BrainCircuit
 } from 'lucide-react';
 import type { Scores, ScoreDelta, Feedback } from '../hooks/useInterview';
 import FuturisticLayout from '../components/FuturisticLayout';
@@ -33,7 +33,9 @@ interface InterviewSessionProps {
     stopSpeaking: () => void;
     resetTranscript: () => void;
     voiceSupported: boolean;
-    setupData: { role: string; interviewType: string };
+    setupData: { role: string; interviewType: string; techStack?: string; difficulty?: string };
+    verdict: string | null;
+    sentiment: string;
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -43,32 +45,42 @@ interface InterviewSessionProps {
 const GlowingScoreBar = ({ label, value, color, delta }: {
     label: string; value: number; color: string; delta: number | null;
 }) => (
-    <div style={{ marginBottom: '20px' }}>
+    <div style={{ marginBottom: '22px' }}>
         <div style={{
             display: 'flex', justifyContent: 'space-between', alignItems: 'center',
             marginBottom: '10px',
         }}>
-            <span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'var(--font-futuristic)' }}>
-                {label}
-            </span>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '1rem', fontWeight: 900, color: 'white', fontFamily: 'var(--font-mono)' }}>
-                    {value}%
+                <span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'var(--font-futuristic)' }}>
+                    {label}
                 </span>
+                {delta !== null && delta !== 0 && (
+                    <motion.div 
+                        initial={{ opacity: 0, x: -10 }} 
+                        animate={{ opacity: 1, x: 0 }}
+                        style={{ 
+                            color: delta > 0 ? '#22c55e' : '#ef4444', 
+                            fontSize: '0.75rem', fontWeight: 900, 
+                            display: 'flex', alignItems: 'center', gap: '2px',
+                            background: delta > 0 ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                            padding: '1px 6px', borderRadius: '4px'
+                        }}
+                    >
+                        {delta > 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+                        {Math.abs(delta)}
+                    </motion.div>
+                )}
             </div>
+            <span style={{ fontSize: '1rem', fontWeight: 900, color: 'white', fontFamily: 'var(--font-mono)' }}>
+                {value}%
+            </span>
         </div>
-        <div style={{
-            height: '4px', background: 'rgba(255,255,255,0.05)', borderRadius: '10px',
-            overflow: 'hidden', position: 'relative',
-        }}>
+        <div style={{ height: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '100px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.02)' }}>
             <motion.div
-                initial={false}
+                initial={{ width: 0 }}
                 animate={{ width: `${value}%` }}
-                transition={{ type: 'spring', stiffness: 100, damping: 20 }}
-                style={{
-                    height: '100%', background: color, borderRadius: '10px',
-                    boxShadow: `0 0 15px ${color}`,
-                }}
+                transition={{ type: 'spring', stiffness: 50, damping: 20 }}
+                style={{ height: '100%', background: color, boxShadow: `0 0 20px ${color}88` }}
             />
         </div>
     </div>
@@ -104,7 +116,7 @@ const InterviewSession: React.FC<InterviewSessionProps> = (props) => {
         currentQuestion, questionNumber, totalQuestions, scores, lastScoreDelta,
         lastFeedback, showFeedback, loading, error, onSubmitAnswer, onProceedToNext,
         onDismissError, isListening, isSpeaking, transcript, startListening,
-        stopListening, speak, stopSpeaking, resetTranscript, voiceSupported, setupData,
+        stopListening, speak, stopSpeaking, resetTranscript, voiceSupported, setupData, verdict, sentiment,
     } = props;
 
     const [typedAnswer, setTypedAnswer] = useState('');
@@ -139,7 +151,7 @@ const InterviewSession: React.FC<InterviewSessionProps> = (props) => {
                 
                 {/* Header Stats */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
-                    <div style={{ display: 'flex', gap: '40px' }}>
+                    <div style={{ display: 'flex', gap: '30px', flexWrap: 'wrap' }}>
                         <div>
                             <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 800, marginBottom: '5px' }}>INTERVIEW TYPE</div>
                             <div style={{ color: 'white', fontWeight: 700, fontFamily: 'var(--font-futuristic)', fontSize: '0.9rem' }}>{setupData.interviewType.toUpperCase()}</div>
@@ -147,6 +159,22 @@ const InterviewSession: React.FC<InterviewSessionProps> = (props) => {
                         <div>
                             <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 800, marginBottom: '5px' }}>TARGET ROLE</div>
                             <div style={{ color: 'white', fontWeight: 700, fontFamily: 'var(--font-futuristic)', fontSize: '0.9rem' }}>{setupData.role.toUpperCase()}</div>
+                        </div>
+                        {setupData.interviewType !== 'hr' && setupData.techStack && (
+                            <div>
+                                <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 800, marginBottom: '5px' }}>TECH STACK</div>
+                                <div style={{ color: 'var(--accent-cyan)', fontWeight: 700, fontFamily: 'var(--font-futuristic)', fontSize: '0.9rem', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={setupData.techStack}>{setupData.techStack}</div>
+                            </div>
+                        )}
+                        <div>
+                            <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 800, marginBottom: '5px' }}>DIFFICULTY</div>
+                            <div style={{ color: setupData.difficulty === 'hard' ? '#ef4444' : setupData.difficulty === 'medium' ? '#f59e0b' : '#22c55e', fontWeight: 700, fontFamily: 'var(--font-futuristic)', fontSize: '0.9rem', textTransform: 'uppercase' }}>
+                                {setupData.difficulty}
+                            </div>
+                        </div>
+                        <div>
+                            <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 800, marginBottom: '5px' }}>PROGRESS</div>
+                            <div style={{ color: 'var(--accent-purple)', fontWeight: 700, fontFamily: 'var(--font-futuristic)', fontSize: '0.9rem' }}>Q {questionNumber} / {totalQuestions}</div>
                         </div>
                     </div>
                     
@@ -169,11 +197,13 @@ const InterviewSession: React.FC<InterviewSessionProps> = (props) => {
                             }}></div>
                             <motion.div 
                                 className="robot-avatar"
+                                animate={loading ? { scale: [1, 1.05, 1], rotate: [0, 1, -1, 0] } : {}}
+                                transition={{ duration: 2, repeat: Infinity }}
                                 style={{
                                     width: '180px', height: '180px', borderRadius: '50%',
-                                    border: '2px solid rgba(59, 123, 246, 0.3)',
+                                    border: loading ? '2px solid var(--accent-cyan)' : '2px solid rgba(59, 123, 246, 0.3)',
                                     padding: '5px', background: 'rgba(5, 8, 16, 0.8)',
-                                    boxShadow: '0 0 30px rgba(59, 123, 246, 0.2)',
+                                    boxShadow: loading ? '0 0 40px rgba(6, 214, 199, 0.3)' : '0 0 30px rgba(59, 123, 246, 0.2)',
                                     overflow: 'hidden'
                                 }}
                             >
@@ -216,16 +246,15 @@ const InterviewSession: React.FC<InterviewSessionProps> = (props) => {
                                 textAlign: 'center', position: 'relative'
                             }}
                         >
-                            <div style={{ 
-                                position: 'absolute', top: '-12px', left: '50%', transform: 'translateX(-50%)',
-                                background: 'var(--accent-blue)', color: 'white', padding: '4px 15px', borderRadius: '20px',
-                                fontSize: '0.65rem', fontWeight: 900, fontFamily: 'var(--font-futuristic)', letterSpacing: '1px'
-                            }}>
-                                INCOMING QUESTION
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginBottom: '15px' }}>
+                                <Activity size={14} color="var(--accent-purple)" />
+                                <span style={{ fontSize: '0.65rem', fontWeight: 900, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                                    Live Sentiment: <span style={{ color: 'white' }}>{sentiment}</span>
+                                </span>
                             </div>
 
                             <p style={{ fontSize: '1.4rem', color: 'white', lineHeight: 1.6, fontWeight: 500 }}>
-                                {loading && !showFeedback ? "Processing response..." : currentQuestion}
+                                {loading && !showFeedback ? "Maya is processing your response..." : currentQuestion}
                             </p>
 
                             {isSpeaking && (
@@ -260,19 +289,35 @@ const InterviewSession: React.FC<InterviewSessionProps> = (props) => {
                                     }}
                                 />
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px' }}>
-                                    <div style={{ display: 'flex', gap: '10px' }}>
+                                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                                         <motion.button 
                                             whileTap={{ scale: 0.9 }}
-                                            onClick={isListening ? stopListening : startListening}
+                                            onClick={() => {
+                                                console.log('Mic button clicked. Current state:', { isListening, isSupported: voiceSupported });
+                                                if (!voiceSupported) {
+                                                    alert("Your browser doesn't support Speech Recognition. Please use Chrome or Edge.");
+                                                    return;
+                                                }
+                                                isListening ? stopListening() : startListening();
+                                            }}
                                             className={isListening ? "btn-mic-active" : ""}
                                             style={{
                                                 width: '50px', height: '50px', borderRadius: '50%',
-                                                background: 'var(--bg-tertiary)', border: 'none', cursor: 'pointer',
-                                                display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white'
+                                                background: !voiceSupported ? '#333' : 'var(--bg-tertiary)', 
+                                                border: 'none', cursor: voiceSupported ? 'pointer' : 'not-allowed',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                                                color: !voiceSupported ? '#666' : 'white',
+                                                position: 'relative'
                                             }}
                                         >
                                             {isListening ? <MicOff size={20} /> : <Mic size={20} />}
+                                            {!voiceSupported && (
+                                                <div style={{ position: 'absolute', top: 0, right: 0, background: '#ef4444', borderRadius: '50%', width: '12px', height: '12px', border: '2px solid var(--bg-primary)' }} />
+                                            )}
                                         </motion.button>
+                                        {!voiceSupported && (
+                                            <span style={{ fontSize: '0.7rem', color: '#ef4444', fontWeight: 800 }}>NOT SUPPORTED</span>
+                                        )}
                                         <button 
                                             onClick={() => setShowCode(!showCode)}
                                             style={{
@@ -365,71 +410,138 @@ const InterviewSession: React.FC<InterviewSessionProps> = (props) => {
                                 {/* Live Assessment */}
                                 <div className="glass" style={{ padding: '25px', borderRadius: '25px' }}>
                                     <div style={{ fontSize: '0.7rem', color: 'white', fontWeight: 800, marginBottom: '25px', fontFamily: 'var(--font-futuristic)', letterSpacing: '1px' }}>LIVE ANALYTICS</div>
-                                    <GlowingScoreBar label={setupData.interviewType === 'hr' ? "Clarity" : "Technical"} value={scores.technical} color="var(--accent-blue)" delta={lastScoreDelta?.technical} />
-                                    <GlowingScoreBar label="Communication" value={scores.communication} color="var(--accent-cyan)" delta={lastScoreDelta?.communication} />
-                                    <GlowingScoreBar label="Confidence" value={scores.confidence} color="var(--accent-purple)" delta={lastScoreDelta?.confidence} />
+                                    <GlowingScoreBar label={setupData.interviewType === 'hr' ? "Clarity" : "Technical"} value={scores.technical} color="var(--accent-blue)" delta={lastScoreDelta?.technical ?? null} />
+                                    <GlowingScoreBar label="Communication" value={scores.communication} color="var(--accent-cyan)" delta={lastScoreDelta?.communication ?? null} />
+                                    <GlowingScoreBar label="Confidence" value={scores.confidence} color="var(--accent-purple)" delta={lastScoreDelta?.confidence ?? null} />
                                 </div>
 
-                                {/* AI Insight Card */}
-                                <AnimatePresence>
-                                    {showFeedback && lastFeedback && (
-                                        <motion.div 
-                                            initial={{ opacity: 0, scale: 0.9 }}
-                                            animate={{ opacity: 1, scale: 1 }}
-                                            className="glass holographic-grid"
-                                            style={{
-                                                padding: '25px', borderRadius: '25px', 
-                                                border: '1px solid rgba(6, 214, 199, 0.3)',
-                                                background: 'linear-gradient(135deg, rgba(6, 214, 199, 0.05), transparent)'
-                                            }}
-                                        >
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px' }}>
-                                                <Sparkles size={16} color="var(--accent-cyan)" />
-                                                <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'white' }}>AI FEEDBACK</span>
-                                            </div>
-                                            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '20px' }}>
-                                                {lastFeedback.positive}
-                                            </p>
-                                            <button 
-                                                onClick={onProceedToNext}
-                                                style={{
-                                                    width: '100%', padding: '12px', borderRadius: '12px',
-                                                    background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)',
-                                                    color: 'white', fontWeight: 700, cursor: 'pointer',
-                                                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px'
-                                                }}
-                                            >
-                                                Next Challenge <ChevronRight size={16} />
-                                            </button>
-                                        </motion.div>
-                                    )}
-                                </AnimatePresence>
+            {/* AI Feedback Modal Popup */}
+            <AnimatePresence>
+                {showFeedback && lastFeedback && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        style={{
+                            position: 'fixed', inset: 0, zIndex: 2000,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            padding: '20px', background: 'rgba(5, 8, 16, 0.9)',
+                            backdropFilter: 'blur(12px)'
+                        }}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, y: 20, opacity: 0 }}
+                            animate={{ scale: 1, y: 0, opacity: 1 }}
+                            exit={{ scale: 0.9, y: 20, opacity: 0 }}
+                            className="glass holographic-grid"
+                            style={{
+                                width: '100%', maxWidth: '700px', padding: '40px', borderRadius: '40px',
+                                border: '1px solid rgba(6, 214, 199, 0.4)',
+                                boxShadow: '0 0 50px rgba(6, 214, 199, 0.15)',
+                                position: 'relative', overflow: 'hidden'
+                            }}
+                        >
+                            {/* Decorative Glow */}
+                            <div style={{
+                                position: 'absolute', top: '-100px', right: '-100px',
+                                width: '200px', height: '200px', background: 'var(--accent-cyan)',
+                                filter: 'blur(100px)', opacity: 0.15, borderRadius: '50%'
+                            }} />
+
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '30px' }}>
+                                <div style={{ 
+                                    width: '45px', height: '45px', borderRadius: '12px', 
+                                    background: 'rgba(6, 214, 199, 0.15)', display: 'flex', 
+                                    alignItems: 'center', justifyContent: 'center', border: '1px solid var(--accent-cyan)'
+                                }}>
+                                    <Sparkles size={24} color="var(--accent-cyan)" />
+                                </div>
+                                <div>
+                                    <h2 style={{ fontSize: '1.5rem', fontWeight: 900, color: 'white', margin: 0, letterSpacing: '1px' }}>AI JUDGMENT</h2>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '5px' }}>
+                                        <p style={{ fontSize: '0.7rem', color: 'var(--accent-cyan)', fontWeight: 800, margin: 0 }}>PERFORMANCE ANALYSIS COMPLETE</p>
+                                        <span style={{ 
+                                            padding: '2px 10px', borderRadius: '100px', fontSize: '0.65rem', fontWeight: 900,
+                                            background: verdict === 'Elite' || verdict === 'Professional' ? 'rgba(34, 197, 94, 0.2)' : 
+                                                        verdict === 'Good' || verdict === 'Mediocre' ? 'rgba(245, 158, 11, 0.2)' : 'rgba(239, 68, 68, 0.2)',
+                                            color: verdict === 'Elite' || verdict === 'Professional' ? '#22c55e' : 
+                                                   verdict === 'Good' || verdict === 'Mediocre' ? '#f59e0b' : '#ef4444',
+                                            border: `1px solid ${verdict === 'Elite' || verdict === 'Professional' ? '#22c55e' : 
+                                                                verdict === 'Good' || verdict === 'Mediocre' ? '#f59e0b' : '#ef4444'}`,
+                                            textTransform: 'uppercase'
+                                        }}>
+                                            {verdict || 'Processing'}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Score Changes */}
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginBottom: '35px' }}>
+                                {[
+                                    { label: 'Technical', val: lastScoreDelta?.technical, color: 'var(--accent-blue)' },
+                                    { label: 'Comm.', val: lastScoreDelta?.communication, color: 'var(--accent-cyan)' },
+                                    { label: 'Confidence', val: lastScoreDelta?.confidence, color: 'var(--accent-purple)' }
+                                ].map((s, i) => (
+                                    <div key={i} className="glass" style={{ padding: '15px', borderRadius: '20px', textAlign: 'center', border: '1px solid rgba(255,255,255,0.05)' }}>
+                                        <div style={{ fontSize: '0.6rem', color: 'var(--text-secondary)', fontWeight: 800, marginBottom: '5px', textTransform: 'uppercase' }}>{s.label}</div>
+                                        <div style={{ fontSize: '1.2rem', fontWeight: 900, color: (s.val || 0) >= 0 ? '#22c55e' : '#ef4444', fontFamily: 'var(--font-mono)' }}>
+                                            {(s.val || 0) >= 0 ? `+${s.val}` : s.val}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '25px', marginBottom: '40px' }}>
+                                <div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                                        <ThumbsUp size={16} color="#22c55e" />
+                                        <span style={{ fontSize: '0.8rem', fontWeight: 900, color: 'white', letterSpacing: '1px' }}>WHAT YOU NAILED</span>
+                                    </div>
+                                    <div className="glass" style={{ padding: '20px', borderRadius: '18px', background: 'rgba(34, 197, 94, 0.05)', border: '1px solid rgba(34, 197, 94, 0.1)' }}>
+                                        <p style={{ fontSize: '0.95rem', color: 'rgba(255,255,255,0.9)', lineHeight: 1.6, margin: 0 }}>
+                                            {lastFeedback.positive}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                                        <Lightbulb size={16} color="var(--accent-gold)" />
+                                        <span style={{ fontSize: '0.8rem', fontWeight: 900, color: 'white', letterSpacing: '1px' }}>ROOM FOR GROWTH</span>
+                                    </div>
+                                    <div className="glass" style={{ padding: '20px', borderRadius: '18px', background: 'rgba(245, 158, 11, 0.05)', border: '1px solid rgba(245, 158, 11, 0.1)' }}>
+                                        <p style={{ fontSize: '0.95rem', color: 'rgba(255,255,255,0.9)', lineHeight: 1.6, margin: 0 }}>
+                                            {lastFeedback.improvement}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <motion.button
+                                whileHover={{ scale: 1.02, boxShadow: '0 0 20px rgba(6, 214, 199, 0.3)' }}
+                                whileTap={{ scale: 0.98 }}
+                                onClick={onProceedToNext}
+                                style={{
+                                    width: '100%', padding: '20px', borderRadius: '18px',
+                                    background: 'linear-gradient(135deg, var(--accent-blue), var(--accent-cyan))',
+                                    color: 'black', fontWeight: 900, border: 'none', cursor: 'pointer',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px',
+                                    fontFamily: 'var(--font-futuristic)', letterSpacing: '1px', fontSize: '0.9rem'
+                                }}
+                            >
+                                PROCEED TO NEXT CHALLENGE <ChevronRight size={20} />
+                            </motion.button>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
                             </>
                         )}
                     </div>
                 </div>
             </div>
 
-            {/* Global Error Banner */}
-            <AnimatePresence>
-                {error && (
-                    <motion.div 
-                        initial={{ opacity: 0, y: 50 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0 }}
-                        style={{
-                            position: 'fixed', bottom: '30px', left: '50%', transform: 'translateX(-50%)',
-                            zIndex: 1000, background: 'rgba(239, 68, 68, 0.9)', backdropFilter: 'blur(10px)',
-                            padding: '12px 25px', borderRadius: '100px', display: 'flex', alignItems: 'center',
-                            gap: '15px', border: '1px solid #ef4444', color: 'white', boxShadow: '0 10px 30px rgba(0,0,0,0.5)'
-                        }}
-                    >
-                        <AlertCircle size={18} />
-                        <span style={{ fontWeight: 600 }}>{error}</span>
-                        <button onClick={onDismissError} style={{ background: 'white', border: 'none', color: '#ef4444', borderRadius: '50%', width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontWeight: 900 }}>×</button>
-                    </motion.div>
-                )}
-            </AnimatePresence>
         </FuturisticLayout>
     );
 };

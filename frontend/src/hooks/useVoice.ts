@@ -43,7 +43,10 @@ export const useVoice = (onAutoSubmit?: (transcript: string) => void): UseVoiceR
         recognition.interimResults = true;
         recognition.lang = 'en-US';
 
-        recognition.onstart = () => setIsListening(true);
+        recognition.onstart = () => {
+            console.log('Speech recognition service started');
+            setIsListening(true);
+        };
 
         recognition.onresult = (event: any) => {
             let finalTranscript = '';
@@ -59,39 +62,63 @@ export const useVoice = (onAutoSubmit?: (transcript: string) => void): UseVoiceR
             }
 
             const combined = (finalTranscript + interimTranscript).trim();
-            setTranscript(combined);
+            if (combined) {
+                setTranscript(combined);
+                latestTranscriptRef.current = combined;
+                console.log('Voice capture:', combined);
+            }
 
-            // Auto-submit after 2 seconds of silence
+            // Auto-submit after 3 seconds of silence if transcript is meaningful
             if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
-            if (combined.length > 15 && onAutoSubmit) {
+            if (combined.length > 5 && onAutoSubmit) {
                 silenceTimerRef.current = setTimeout(() => {
-                    if (latestTranscriptRef.current.trim().length > 15) {
+                    if (latestTranscriptRef.current.trim().length > 5) {
+                        console.log('Auto-submitting voice answer...');
+                        onStartSpeaking(); // Stop any current synthesis
                         onAutoSubmit(latestTranscriptRef.current);
                     }
-                }, 2000);
+                }, 3000);
             }
         };
 
         recognition.onerror = (event: any) => {
-            console.warn('Speech recognition error:', event.error);
-            if (event.error !== 'aborted') {
+            console.error('Speech recognition error:', event.error, event.message);
+            if (event.error === 'not-allowed') {
+                alert('Microphone access denied. Please allow mic access.');
+            }
+            if (event.error !== 'no-speech') {
                 setIsListening(false);
             }
         };
 
         recognition.onend = () => {
-            setIsListening(false);
+            console.log('Speech recognition service ended');
+            // Auto-restart if we're supposed to be listening
+            if (isListening) {
+                console.log('Auto-restarting mic...');
+                try {
+                    recognition.start();
+                } catch (e) {
+                    console.log('Auto-restart failed, setting isListening to false');
+                    setIsListening(false);
+                }
+            } else {
+                setIsListening(false);
+            }
         };
 
         recognitionRef.current = recognition;
 
         return () => {
             if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+            // Don't auto-restart when unmounting
+            recognition.onend = null; 
             try { recognition.stop(); } catch { /* ignore */ }
         };
-    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [isListening]); // added isListening to deps so the closure has the latest value
 
     const startListening = useCallback(() => {
+        console.log('Mic Activation Attempted. Engine Ready:', !!recognitionRef.current, 'Already Listening:', isListening);
         if (!recognitionRef.current || isListening) return;
         try {
             setTranscript('');

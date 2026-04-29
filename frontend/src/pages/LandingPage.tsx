@@ -1,12 +1,16 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
-    Zap, Target, Mic, ArrowRight, Play, Star,
-    BarChart3, Users, Sparkles, Shield, Cpu
+    Zap, Target, Mic, ArrowRight,
+    Sparkles, Shield, Cpu
 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 const LandingPage: React.FC = () => {
+    const { user } = useAuth();
+    const navigate = useNavigate();
+
     return (
         <div style={{ position: 'relative', overflow: 'hidden', minHeight: '100vh', background: 'var(--bg-primary)' }}>
             
@@ -94,20 +98,49 @@ const LandingPage: React.FC = () => {
                         transition={{ delay: 0.3 }}
                         style={{ display: 'flex', gap: '25px', justifyContent: 'center', marginBottom: '100px' }}
                     >
-                        <Link to="/register" className="btn-primary neon-border" style={{ 
-                            padding: '24px 50px', fontSize: '0.9rem', 
-                            fontFamily: 'var(--font-futuristic)', letterSpacing: '2px',
-                            background: 'white', color: 'black', fontWeight: 900
-                        }}>
-                            INITIALIZE INTERVIEW <ArrowRight size={20} />
-                        </Link>
-                        <button className="btn-secondary" style={{ 
-                            padding: '24px 50px', fontSize: '0.9rem', 
-                            fontFamily: 'var(--font-futuristic)', letterSpacing: '2px',
-                            background: 'rgba(255,255,255,0.02)', fontWeight: 800
-                        }}>
-                             CORE SPECS <Cpu size={20} />
-                        </button>
+                        {user ? (
+                            <>
+                                <button
+                                    onClick={() => navigate('/dashboard')}
+                                    className="btn-primary neon-border"
+                                    style={{
+                                        padding: '24px 50px', fontSize: '0.9rem',
+                                        fontFamily: 'var(--font-futuristic)', letterSpacing: '2px',
+                                        background: 'white', color: 'black', fontWeight: 900
+                                    }}
+                                >
+                                    GO TO DASHBOARD <ArrowRight size={20} />
+                                </button>
+                                <button
+                                    onClick={() => navigate('/interview')}
+                                    className="btn-secondary"
+                                    style={{
+                                        padding: '24px 50px', fontSize: '0.9rem',
+                                        fontFamily: 'var(--font-futuristic)', letterSpacing: '2px',
+                                        background: 'rgba(255,255,255,0.02)', fontWeight: 800
+                                    }}
+                                >
+                                    NEW SESSION <Cpu size={20} />
+                                </button>
+                            </>
+                        ) : (
+                            <>
+                                <Link to="/register" className="btn-primary neon-border" style={{
+                                    padding: '24px 50px', fontSize: '0.9rem',
+                                    fontFamily: 'var(--font-futuristic)', letterSpacing: '2px',
+                                    background: 'white', color: 'black', fontWeight: 900
+                                }}>
+                                    INITIALIZE INTERVIEW <ArrowRight size={20} />
+                                </Link>
+                                <button className="btn-secondary" style={{
+                                    padding: '24px 50px', fontSize: '0.9rem',
+                                    fontFamily: 'var(--font-futuristic)', letterSpacing: '2px',
+                                    background: 'rgba(255,255,255,0.02)', fontWeight: 800
+                                }}>
+                                    CORE SPECS <Cpu size={20} />
+                                </button>
+                            </>
+                        )}
                     </motion.div>
                 </div>
 

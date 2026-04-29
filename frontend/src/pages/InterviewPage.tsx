@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { BrainCircuit, Clock, Loader2 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { BrainCircuit, Clock, Loader2, AlertCircle } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
 import { useInterview } from '../hooks/useInterview';
 import { useVoice } from '../hooks/useVoice';
 import InterviewSetup from './InterviewSetup';
@@ -48,7 +48,7 @@ const InterviewPage: React.FC = () => {
                 padding: '0 40px', position: 'relative', zIndex: 10,
                 background: 'rgba(5, 8, 16, 0.6)', backdropFilter: 'blur(20px)',
             }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <Link to="/dashboard" style={{ display: 'flex', alignItems: 'center', gap: '16px', textDecoration: 'none', color: 'inherit' }}>
                     <div style={{
                         width: '32px', height: '32px', borderRadius: '8px',
                         background: 'var(--accent-blue)',
@@ -59,7 +59,7 @@ const InterviewPage: React.FC = () => {
                     <span style={{ fontWeight: 800, fontSize: '1.15rem', letterSpacing: '-0.02em' }}>
                         HireMind <span style={{ color: 'var(--accent-cyan)' }}>AI</span>
                     </span>
-                </div>
+                </Link>
 
                 {interview.phase === 'interview' && (
                     <div style={{
@@ -104,6 +104,23 @@ const InterviewPage: React.FC = () => {
                 </div>
             </header>
 
+            {/* Session Progress Bar */}
+            {interview.phase === 'interview' && (
+                <div style={{ 
+                    height: '2px', width: '100%', background: 'rgba(255,255,255,0.05)', 
+                    position: 'relative', zIndex: 10, overflow: 'hidden' 
+                }}>
+                    <motion.div 
+                        initial={{ width: 0 }}
+                        animate={{ width: `${(interview.questionNumber / interview.totalQuestions) * 100}%` }}
+                        style={{ 
+                            height: '100%', background: 'linear-gradient(90deg, var(--accent-blue), var(--accent-cyan))',
+                            boxShadow: '0 0 10px var(--accent-cyan)'
+                        }}
+                    />
+                </div>
+            )}
+
             {/* Main Content */}
             <main className="container" style={{
                 position: 'relative', zIndex: 1, paddingTop: '40px',
@@ -146,6 +163,7 @@ const InterviewPage: React.FC = () => {
                             resetTranscript={voice.resetTranscript}
                             voiceSupported={voice.isSupported}
                             setupData={interview.setupData}
+                            verdict={interview.verdict}
                         />
                     )}
 
@@ -187,6 +205,27 @@ const InterviewPage: React.FC = () => {
                     )}
                 </AnimatePresence>
             </main>
+ 
+             {/* Global Error Banner */}
+             <AnimatePresence>
+                 {interview.error && (
+                     <motion.div 
+                         initial={{ opacity: 0, y: 50 }}
+                         animate={{ opacity: 1, y: 0 }}
+                         exit={{ opacity: 0 }}
+                         style={{
+                             position: 'fixed', bottom: '30px', left: '50%', transform: 'translateX(-50%)',
+                             zIndex: 1000, background: 'rgba(239, 68, 68, 0.9)', backdropFilter: 'blur(10px)',
+                             padding: '12px 25px', borderRadius: '100px', display: 'flex', alignItems: 'center',
+                             gap: '15px', border: '1px solid #ef4444', color: 'white', boxShadow: '0 10px 30px rgba(0,0,0,0.5)'
+                         }}
+                     >
+                         <AlertCircle size={18} />
+                         <span style={{ fontWeight: 600 }}>{interview.error}</span>
+                         <button onClick={interview.dismissError} style={{ background: 'white', border: 'none', color: '#ef4444', borderRadius: '50%', width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontWeight: 900 }}>×</button>
+                     </motion.div>
+                 )}
+             </AnimatePresence>
         </div>
     );
 };

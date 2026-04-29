@@ -16,7 +16,7 @@ const Dashboard: React.FC = () => {
     const [stats, setStats] = useState({
         completed: 0,
         avgScore: 0,
-        bestPerformance: 'N/A',
+        eliteRating: 0,
         streak: 0
     });
     const [interviews, setInterviews] = useState<any[]>([]);
@@ -31,11 +31,12 @@ const Dashboard: React.FC = () => {
 
                 if (res.data.length > 0) {
                     const avg = res.data.reduce((acc: number, curr: any) => acc + (curr.evaluation?.overallScore || 0), 0) / res.data.length;
+                    const best = Math.max(...res.data.map((iv: any) => iv.evaluation?.overallScore || 0));
                     setStats({
                         completed: res.data.length,
                         avgScore: Math.round(avg),
-                        bestPerformance: 'Google SDE-2',
-                        streak: 3
+                        eliteRating: best,
+                        streak: res.data.length
                     });
                 }
             } catch (err) {
@@ -65,7 +66,7 @@ const Dashboard: React.FC = () => {
                     {[
                         { label: "Sessions", value: stats.completed, suffix: "", icon: <History />, color: 'var(--accent-blue)' },
                         { label: "Avg Precision", value: stats.avgScore, suffix: "%", icon: <BarChart2 />, color: 'var(--accent-cyan)' },
-                        { label: "Elite Rating", value: 88, suffix: "%", icon: <Trophy />, color: 'var(--accent-purple)' },
+                        { label: "Elite Rating", value: stats.eliteRating, suffix: "%", icon: <Trophy />, color: 'var(--accent-purple)' },
                         { label: "Synergy Streak", value: stats.streak, suffix: "d", icon: <Flame />, color: 'var(--accent-gold)' }
                     ].map((stat, i) => (
                         <motion.div 
