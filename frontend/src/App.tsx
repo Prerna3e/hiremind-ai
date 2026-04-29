@@ -7,13 +7,13 @@ import RegisterPage from './pages/RegisterPage';
 import Dashboard from './pages/Dashboard';
 import InterviewPage from './pages/InterviewPage';
 import ResumeAnalysis from './pages/ResumeAnalysis';
-import DSAPractice from './pages/DSAPractice';
+import HRQuestions from './pages/HRQuestions';
 import ProtectedRoute from './components/ProtectedRoute';
 import { AuthProvider } from './context/AuthContext';
 
 const AppContent: React.FC = () => {
   const location = useLocation();
-  const isFuturisticPage = location.pathname === '/dashboard' || location.pathname === '/interview' || location.pathname === '/resume' || location.pathname === '/dsa';
+  const isFuturisticPage = location.pathname === '/dashboard' || location.pathname === '/interview' || location.pathname === '/resume' || location.pathname === '/hr';
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -48,10 +48,10 @@ const AppContent: React.FC = () => {
             }
           />
           <Route
-            path="/dsa"
+            path="/hr"
             element={
               <ProtectedRoute>
-                <DSAPractice />
+                <HRQuestions />
               </ProtectedRoute>
             }
           />

@@ -88,6 +88,7 @@ const startInterview = async (req: any, res: Response) => {
 
         res.status(201).json({
             interviewId: interview._id,
+            questions: [firstQuestion], // Added for frontend compatibility
             currentQuestion: firstQuestion,
             questionNumber: 1,
             totalQuestions: numberOfQuestions,
@@ -256,7 +257,8 @@ const evaluateInterview = async (req: any, res: Response) => {
         const evalPrompt = buildEvaluationPrompt(
             interview.role || 'Software Engineer',
             interview.experienceLevel || 'Mid',
-            transcript
+            transcript,
+            interview.interviewType || 'technical'
         );
 
         let evaluation: any = {

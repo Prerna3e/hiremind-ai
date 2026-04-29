@@ -119,7 +119,7 @@ export const useInterview = (): UseInterviewReturn => {
                 {
                     role: setupData.role,
                     experienceLevel: setupData.experienceLevel,
-                    techStack: setupData.techStack,
+                    techStack: setupData.interviewType === 'hr' ? '' : setupData.techStack, // Default to empty for HR
                     interviewType: setupData.interviewType,
                     numberOfQuestions: setupData.numberOfQuestions,
                     difficulty: setupData.difficulty,
@@ -128,7 +128,9 @@ export const useInterview = (): UseInterviewReturn => {
             );
 
             setInterviewId(res.data.interviewId);
-            setCurrentQuestion(res.data.currentQuestion);
+            // Support both questions array and single currentQuestion field
+            const initialQuestion = res.data.questions ? res.data.questions[0] : res.data.currentQuestion;
+            setCurrentQuestion(initialQuestion);
             setQuestionNumber(res.data.questionNumber);
             setTotalQuestions(res.data.totalQuestions);
             setScores(res.data.scores);

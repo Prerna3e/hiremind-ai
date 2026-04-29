@@ -129,15 +129,17 @@ const InterviewSetup: React.FC<InterviewSetupProps> = ({ setupData, setSetupData
                                     ))}
                                 </div>
                             </div>
-                            <div>
-                                <label style={labelStyle}>Tech Stack</label>
-                                <input
-                                    value={setupData.techStack}
-                                    onChange={e => setSetupData(prev => ({ ...prev, techStack: e.target.value }))}
-                                    placeholder="React, Node.js, TypeScript, AWS..."
-                                    style={{ width: '100%', padding: '16px 20px', fontSize: '1.1rem' }}
-                                />
-                            </div>
+                            {setupData.interviewType !== 'hr' && (
+                                <div>
+                                    <label style={labelStyle}>Tech Stack</label>
+                                    <input
+                                        value={setupData.techStack}
+                                        onChange={e => setSetupData(prev => ({ ...prev, techStack: e.target.value }))}
+                                        placeholder="React, Node.js, TypeScript, AWS..."
+                                        style={{ width: '100%', padding: '16px 20px', fontSize: '1.1rem' }}
+                                    />
+                                </div>
+                            )}
                         </div>
                     </motion.div>
                 )}

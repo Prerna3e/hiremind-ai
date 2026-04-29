@@ -56,9 +56,8 @@ Focus on: coding problems, system design, architecture, algorithms, debugging, t
 Ask about ${techStack.join(', ')} specifically.
 Go deeper on every answer — don't accept surface-level responses.
 ` : interviewType === 'hr' ? `
-Focus on: behavioral questions, STAR method, leadership, teamwork, conflict resolution, motivation.
-Ask about real experiences, not hypotheticals.
-Probe beneath rehearsed answers.
+You are an experienced HR interviewer. Focus on: behavioral questions, situational judgment, culture fit, communication skills, career goals, conflict resolution, and teamwork.
+Ask about real experiences, not hypotheticals. Probe beneath rehearsed answers using the STAR method.
 ` : `
 Mix behavioral and technical questions naturally.
 Start with 2-3 behavioral questions, then move to technical, then close with behavioral.
@@ -97,7 +96,7 @@ You MUST return valid JSON in this exact format:
     "positive": "One sentence about what was good (be specific, not generic)",
     "improvement": "One sentence about what could be better (actionable advice)",
     "score_delta": {
-      "technical": <number between -10 and +15>,
+      "technical": <number between -10 and +15>,  // For HR interviews, this represents 'Clarity' and 'Behavioral Depth'
       "communication": <number between -10 and +15>,
       "confidence": <number between -10 and +15>
     }
@@ -136,9 +135,12 @@ For the very first interaction (when there's no previous answer to evaluate):
 export const buildEvaluationPrompt = (
   role: string,
   experienceLevel: string,
-  transcript: string
+  transcript: string,
+  interviewType: string = 'technical'
 ) => {
-  return `You are a senior interview evaluator. Analyze this interview transcript for a ${role} position (${experienceLevel} level).
+  const isHR = interviewType === 'hr';
+  return `You are a senior ${isHR ? 'HR' : 'technical'} interview evaluator. Analyze this ${isHR ? 'behavioral' : 'technical'} interview transcript for a ${role} position (${experienceLevel} level).
+${isHR ? "Focus your evaluation on: Communication, Confidence, Clarity, and Behavioral Depth — NOT on technical accuracy." : "Focus on: Technical Accuracy, Communication, and Confidence."}
 
 Provide a comprehensive evaluation in strict JSON format:
 

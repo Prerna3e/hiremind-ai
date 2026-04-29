@@ -20,7 +20,6 @@ const FuturisticLayout: React.FC<{ children: React.ReactNode }> = ({ children })
     const menuItems = [
         { icon: <MessageSquare size={20} />, label: "Mock Interview", path: "/interview" },
         { icon: <FileText size={20} />, label: "Resume Analysis", path: "/resume" },
-        { icon: <Code size={20} />, label: "DSA Practice", path: "/dsa" },
         { icon: <HelpCircle size={20} />, label: "HR Questions", path: "/hr" },
     ];
 

@@ -365,7 +365,7 @@ const InterviewSession: React.FC<InterviewSessionProps> = (props) => {
                                 {/* Live Assessment */}
                                 <div className="glass" style={{ padding: '25px', borderRadius: '25px' }}>
                                     <div style={{ fontSize: '0.7rem', color: 'white', fontWeight: 800, marginBottom: '25px', fontFamily: 'var(--font-futuristic)', letterSpacing: '1px' }}>LIVE ANALYTICS</div>
-                                    <GlowingScoreBar label="Technical" value={scores.technical} color="var(--accent-blue)" delta={lastScoreDelta?.technical} />
+                                    <GlowingScoreBar label={setupData.interviewType === 'hr' ? "Clarity" : "Technical"} value={scores.technical} color="var(--accent-blue)" delta={lastScoreDelta?.technical} />
                                     <GlowingScoreBar label="Communication" value={scores.communication} color="var(--accent-cyan)" delta={lastScoreDelta?.communication} />
                                     <GlowingScoreBar label="Confidence" value={scores.confidence} color="var(--accent-purple)" delta={lastScoreDelta?.confidence} />
                                 </div>
