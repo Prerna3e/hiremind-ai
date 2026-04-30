@@ -23,7 +23,13 @@ router.post('/speak', async (req: any, res: any) => {
         });
 
         res.set('Content-Type', 'audio/mpeg');
-        audio.pipe(res);
+        
+        // Handle stream vs buffer
+        if (typeof (audio as any).pipe === 'function') {
+            (audio as any).pipe(res);
+        } else {
+            res.send(audio);
+        }
     } catch (error: any) {
         console.error('ElevenLabs Error:', error.message);
         res.status(500).json({ message: 'Speech synthesis failed' });
