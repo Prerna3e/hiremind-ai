@@ -371,7 +371,14 @@ const evaluateInterview = async (req: any, res: Response) => {
     if (!interview)
       return res.status(404).json({ message: "Interview session not found." });
 
+    // Use actual running scores as the base — these were accumulated during the interview
+    const runningTech = interview.scores?.technical ?? 50;
+    const runningComm = interview.scores?.communication ?? 50;
+    const runningConf = interview.scores?.confidence ?? 50;
+    const runningOverall = Math.round(runningTech * 0.4 + runningComm * 0.3 + runningConf * 0.3);
+
     // Build transcript
+    const answeredQuestions = interview.questions.filter(q => q.answer && q.answer.trim().length > 5);
     const transcript = interview.questions
       .map(
         (q, i) =>
@@ -386,50 +393,72 @@ const evaluateInterview = async (req: any, res: Response) => {
       interview.interviewType || "technical",
     );
 
+    // Seed fallback with REAL running scores
     let evaluation: any = {
-      communicationScore: interview.scores?.communication || 50,
-      technicalScore: interview.scores?.technical || 50,
-      confidenceScore: interview.scores?.confidence || 50,
-      overallScore: Math.round(
-        (interview.scores?.technical || 50) * 0.4 +
-          (interview.scores?.communication || 50) * 0.3 +
-          (interview.scores?.confidence || 50) * 0.3,
-      ),
-      strengths: ["Completed the full interview", "Attempted all questions"],
-      weaknesses: ["Could provide more specific examples"],
-      opportunities: [
-        "Deep-dive into system design",
-        "Practice behavioral questions",
-      ],
-      threats: ["May struggle with advanced topics under pressure"],
+      communicationScore: runningComm,
+      technicalScore: runningTech,
+      confidenceScore: runningConf,
+      overallScore: runningOverall,
+      strengths: answeredQuestions.length > 0 
+        ? ["Completed the interview session", "Attempted all questions", "Engaged with the interviewer"]
+        : ["Completed the interview session", "Attempted all questions"],
+      weaknesses: ["Could provide more specific technical examples with metrics"],
+      opportunities: ["Deep-dive into system design", "Practice behavioral questions with STAR method"],
+      threats: ["May struggle with advanced topics under time pressure"],
       topDoneWell: [
-        "Showed enthusiasm",
-        "Communicated ideas clearly",
-        "Good problem-solving approach",
+        "Showed up and completed the full interview session",
+        "Communicated ideas in a structured manner",
+        "Demonstrated baseline knowledge of the required stack",
       ],
       topToImprove: [
-        "Add more technical depth",
+        "Add quantifiable metrics to project descriptions",
         "Use STAR method for behavioral answers",
-        "Practice time management",
+        "Practice explaining technical tradeoffs in depth",
       ],
       suggestedResources: [
         "System Design Interview by Alex Xu",
-        "LeetCode Top 150",
+        "LeetCode Top 150 problems",
         "Cracking the Coding Interview",
       ],
-      summary:
-        "The candidate showed potential but needs more preparation in key areas.",
+      summary: `${runningOverall >= 70 ? "HIRE." : "NO HIRE."} The candidate ${runningOverall >= 70 ? "demonstrated adequate knowledge" : "needs further preparation"} for the ${interview.role || "role"} position. Technical score: ${runningTech}/100, Communication: ${runningComm}/100, Confidence: ${runningConf}/100.`,
     };
 
     try {
       const parsed = await callTogetherAI(
         evalPrompt,
-        "Generate the full evaluation report as JSON.",
+        `Running scores accumulated during interview — Technical: ${runningTech}/100, Communication: ${runningComm}/100, Confidence: ${runningConf}/100. Use these as your baseline when scoring. Generate the full evaluation report as JSON.`,
       );
-      evaluation = { ...evaluation, ...parsed };
+
+      // Only merge valid non-zero AI scores — if AI returns 0s, keep running scores
+      if (parsed.communicationScore && parsed.communicationScore > 0)
+        evaluation.communicationScore = parsed.communicationScore;
+      if (parsed.technicalScore && parsed.technicalScore > 0)
+        evaluation.technicalScore = parsed.technicalScore;
+      if (parsed.confidenceScore && parsed.confidenceScore > 0)
+        evaluation.confidenceScore = parsed.confidenceScore;
+
+      // Recalculate overall from final scores
+      evaluation.overallScore = Math.round(
+        evaluation.technicalScore * 0.4 +
+        evaluation.communicationScore * 0.3 +
+        evaluation.confidenceScore * 0.3
+      );
+      if (parsed.overallScore && parsed.overallScore > 0)
+        evaluation.overallScore = parsed.overallScore;
+
+      // Merge text fields if present
+      if (parsed.strengths?.length > 0) evaluation.strengths = parsed.strengths;
+      if (parsed.weaknesses?.length > 0) evaluation.weaknesses = parsed.weaknesses;
+      if (parsed.opportunities?.length > 0) evaluation.opportunities = parsed.opportunities;
+      if (parsed.threats?.length > 0) evaluation.threats = parsed.threats;
+      if (parsed.topDoneWell?.length > 0) evaluation.topDoneWell = parsed.topDoneWell;
+      if (parsed.topToImprove?.length > 0) evaluation.topToImprove = parsed.topToImprove;
+      if (parsed.suggestedResources?.length > 0) evaluation.suggestedResources = parsed.suggestedResources;
+      if (parsed.summary) evaluation.summary = parsed.summary;
+
     } catch (aiErr: any) {
       console.error("Evaluation AI error:", aiErr.message);
-      // Use fallback evaluation above
+      // Keep fallback with real running scores
     }
 
     interview.evaluation = evaluation;
