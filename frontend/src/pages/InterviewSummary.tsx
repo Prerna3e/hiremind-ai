@@ -110,41 +110,39 @@ const InterviewSummary: React.FC<InterviewSummaryProps> = ({
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ type: 'spring', stiffness: 100, damping: 20 }}
-            style={{ maxWidth: '1100px', margin: '0 auto', paddingBottom: '100px' }}
+            className="full-width-container"
+            style={{ maxWidth: '1200px', margin: '0 auto', paddingBottom: '100px' }}
         >
             {/* Verdict Banner */}
             <motion.div
                 initial={{ y: -30 }}
                 animate={{ y: 0 }}
+                className="glass neon-border"
                 style={{
-                    padding: '40px', borderRadius: '24px', textAlign: 'center', marginBottom: '32px',
+                    padding: '40px', borderRadius: '32px', textAlign: 'center', marginBottom: '32px',
                     background: isHire
-                        ? 'linear-gradient(135deg, #064e3b, #059669)'
-                        : 'linear-gradient(135deg, #450a0a, #991b1b)',
-                    border: `1px solid ${isHire ? '#10b981' : '#ef4444'}`,
-                    boxShadow: '0 20px 60px rgba(0,0,0,0.4)', position: 'relative', overflow: 'hidden',
+                        ? 'linear-gradient(135deg, rgba(6, 78, 59, 0.4), rgba(5, 150, 105, 0.4))'
+                        : 'linear-gradient(135deg, rgba(69, 10, 10, 0.4), rgba(153, 27, 27, 0.4))',
+                    backdropFilter: 'blur(30px)',
+                    position: 'relative', overflow: 'hidden',
                 }}
             >
-                <div style={{
-                    position: 'absolute', inset: 0,
-                    background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent)',
-                    width: '200%', animation: 'shimmer 3s infinite', pointerEvents: 'none',
-                }} />
+                <div className="hologram-grid" style={{ position: 'absolute', inset: 0, opacity: 0.1 }}></div>
                 <h1 style={{
-                    fontSize: '3rem', fontWeight: 900, letterSpacing: '-0.04em',
-                    margin: 0, position: 'relative',
+                    fontSize: '3.5rem', fontWeight: 900, letterSpacing: '2px',
+                    margin: 0, position: 'relative', color: 'white', fontFamily: 'var(--font-futuristic)'
                 }}>
-                    {isHire ? '✓ HIRE RECOMMENDATION' : '✗ NEEDS IMPROVEMENT'}
+                    {isHire ? 'PASS' : 'RETRY'}
                 </h1>
                 <p style={{
-                    fontSize: '1.1rem', color: 'rgba(255,255,255,0.7)', marginTop: '8px',
-                    position: 'relative',
+                    fontSize: '1.2rem', color: isHire ? 'var(--accent-cyan)' : '#ef4444', 
+                    marginTop: '15px', position: 'relative', fontWeight: 800, letterSpacing: '1px'
                 }}>
-                    {setupData.role} · {setupData.interviewType} Interview · {setupData.difficulty} Difficulty
+                    {isHire ? 'VERDICT: ELITE CANDIDATE' : 'VERDICT: NEEDS SYSTEM OPTIMIZATION'}
                 </p>
             </motion.div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '340px 1fr', gap: '28px' }}>
+            <div className="interview-grid with-code">
                 {/* Left Column — Scores */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                     {/* Overall Score */}
@@ -372,7 +370,7 @@ const InterviewSummary: React.FC<InterviewSummaryProps> = ({
                             onClick={onNewInterview}
                             className="btn-primary"
                             style={{
-                                flex: 1, height: '56px', fontSize: '1rem',
+                                flex: 1, height: '56px', fontSize: '1rem', borderRadius: '16px',
                                 background: 'linear-gradient(135deg, var(--accent-blue), var(--accent-purple))',
                             }}
                         >

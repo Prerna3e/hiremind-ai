@@ -6,7 +6,7 @@ interface UseVoiceReturn {
     transcript: string;
     startListening: () => void;
     stopListening: () => void;
-    speak: (text: string) => void;
+    speak: (text: string, persona?: string) => void;
     stopSpeaking: () => void;
     resetTranscript: () => void;
     isSupported: boolean;
@@ -21,11 +21,13 @@ export const useVoice = (onAutoSubmit?: (transcript: string) => void): UseVoiceR
     const recognitionRef = useRef<any>(null);
     const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const latestTranscriptRef = useRef('');
+    const isSubmittingRef = useRef(false);
 
-    // Track transcript in ref for auto-submit callback
-    useEffect(() => {
-        latestTranscriptRef.current = transcript;
-    }, [transcript]);
+    // removed buggy useEffect
+
+    const isManualStopRef = useRef(false);
+
+    const isListeningRef = useRef(false);
 
     // Initialize speech recognition
     useEffect(() => {
@@ -33,122 +35,213 @@ export const useVoice = (onAutoSubmit?: (transcript: string) => void): UseVoiceR
             (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
         if (!SpeechRecognition) {
+            console.log('Speech Recognition not supported');
             setIsSupported(false);
             return;
         }
 
         setIsSupported(true);
+        if (recognitionRef.current) return;
+
         const recognition = new SpeechRecognition();
         recognition.continuous = true;
         recognition.interimResults = true;
-        recognition.lang = 'en-US';
+        recognition.lang = navigator.language || 'en-US';
+        recognitionRef.current = recognition;
 
-        recognition.onstart = () => setIsListening(true);
+        recognition.onstart = () => {
+            console.log('🎤 MIC ON');
+            setIsListening(true);
+            isListeningRef.current = true;
+            isManualStopRef.current = false;
+        };
 
         recognition.onresult = (event: any) => {
-            let finalTranscript = '';
-            let interimTranscript = '';
+            let finalStr = '';
+            let interimStr = '';
 
-            for (let i = 0; i < event.results.length; i++) {
-                const result = event.results[i];
-                if (result.isFinal) {
-                    finalTranscript += result[0].transcript;
+            for (let i = event.resultIndex; i < event.results.length; ++i) {
+                if (event.results[i].isFinal) {
+                    finalStr += event.results[i][0].transcript;
                 } else {
-                    interimTranscript += result[0].transcript;
+                    interimStr += event.results[i][0].transcript;
                 }
             }
 
-            const combined = (finalTranscript + interimTranscript).trim();
-            setTranscript(combined);
+            // Sync with ref to persist final results
+            if (finalStr) {
+                latestTranscriptRef.current = (latestTranscriptRef.current + ' ' + finalStr).trim();
+            }
 
-            // Auto-submit after 2 seconds of silence
+            // Display current state (Final + what's being said now)
+            const displayTranscript = (latestTranscriptRef.current + ' ' + interimStr).trim();
+            console.log('📝 Current Voice Input:', displayTranscript);
+            setTranscript(displayTranscript);
+
+            // Auto-submit after 4s silence if meaningful data exists
             if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
-            if (combined.length > 15 && onAutoSubmit) {
+            if (displayTranscript.length > 5 && onAutoSubmit && !isSubmittingRef.current && !isSpeaking) {
                 silenceTimerRef.current = setTimeout(() => {
-                    if (latestTranscriptRef.current.trim().length > 15) {
-                        onAutoSubmit(latestTranscriptRef.current);
-                    }
-                }, 2000);
+                    const textToSubmit = displayTranscript;
+                    console.log('🚀 Silence Timeout: Auto-Submitting:', textToSubmit);
+                    stopListening();
+                    onAutoSubmit(textToSubmit);
+                }, 4000);
             }
         };
 
         recognition.onerror = (event: any) => {
-            console.warn('Speech recognition error:', event.error);
-            if (event.error !== 'aborted') {
+            console.error('❌ STT Error:', event.error);
+            if (event.error === 'no-speech') return;
+            if (event.error === 'not-allowed') {
+                alert('Mic access denied. Enable it in browser settings.');
                 setIsListening(false);
             }
         };
 
         recognition.onend = () => {
-            setIsListening(false);
+            console.log('🛑 MIC OFF');
+            if (isListeningRef.current && !isManualStopRef.current) {
+                console.log('🔄 Restarting...');
+                try { recognition.start(); } catch { /* ignore */ }
+            } else {
+                setIsListening(false);
+                isListeningRef.current = false;
+            }
         };
 
         recognitionRef.current = recognition;
 
+        // Pre-load voices for SpeechSynthesis
+        const loadVoices = () => {
+            window.speechSynthesis.getVoices();
+        };
+        loadVoices();
+        window.speechSynthesis.onvoiceschanged = loadVoices;
+
         return () => {
             if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+            recognition.onend = null;
+            window.speechSynthesis.onvoiceschanged = null;
             try { recognition.stop(); } catch { /* ignore */ }
         };
-    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    }, []); // No deps - init once
 
     const startListening = useCallback(() => {
-        if (!recognitionRef.current || isListening) return;
+        if (!recognitionRef.current) return;
+        
         try {
             setTranscript('');
+            latestTranscriptRef.current = '';
+            isManualStopRef.current = false;
+            isListeningRef.current = true; // Set this before start to trigger auto-restart logic if needed
             recognitionRef.current.start();
+        } catch (err: any) {
+            console.warn('Start recognition error:', err.message);
+            if (err.message?.includes('already started')) {
+                setIsListening(true);
+                isListeningRef.current = true;
+            }
+        }
+    }, []);
+
+    const stopListening = useCallback(() => {
+        if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+        if (!recognitionRef.current) return;
+        
+        isManualStopRef.current = true;
+        try {
+            recognitionRef.current.stop();
         } catch (err) {
-            console.warn('Failed to start recognition:', err);
+            console.warn('Stop recognition error:', err);
+        }
+        setIsListening(false);
+    }, []);
+
+    const currentAudioRef = useRef<HTMLAudioElement | null>(null);
+
+    const speak = useCallback(async (text: string, persona: string = 'Alex') => {
+        // Stop listening while AI speaks
+        if (recognitionRef.current && isListening) {
+            try { recognitionRef.current.stop(); } catch { /* ignore */ }
+        }
+        if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+        window.speechSynthesis.cancel();
+        if (currentAudioRef.current) {
+            currentAudioRef.current.pause();
+            currentAudioRef.current.currentTime = 0;
+        }
+
+        setIsSpeaking(true);
+
+        try {
+            const response = await fetch('http://localhost:5000/api/speech/speak', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text, persona })
+            });
+
+            if (!response.ok) throw new Error('Speech synthesis failed');
+
+            const blob = await response.blob();
+            const url = URL.createObjectURL(blob);
+            const audio = new Audio(url);
+            currentAudioRef.current = audio;
+
+            audio.onended = () => {
+                setIsSpeaking(false);
+                URL.revokeObjectURL(url);
+            };
+            audio.onerror = () => {
+                setIsSpeaking(false);
+                URL.revokeObjectURL(url);
+            };
+
+            await audio.play();
+        } catch (error) {
+            console.warn('ElevenLabs API failed, falling back to browser TTS:', error);
+            const utterance = new SpeechSynthesisUtterance(text);
+
+            // Pre-fetch voices
+            window.speechSynthesis.getVoices();
+            
+            const selectVoice = () => {
+                const vList = window.speechSynthesis.getVoices();
+                return vList.find(v => 
+                    v.lang.startsWith('en') && 
+                    ['female', 'samantha', 'zira', 'victoria', 'google uk english female', 'microsoft hazel', 'microsoft zira'].some(name => v.name.toLowerCase().includes(name))
+                ) || vList.find(v => v.lang.startsWith('en')) || vList[0];
+            };
+
+            utterance.voice = selectVoice();
+            utterance.rate = 1.0;
+            utterance.pitch = 1.1; // Slightly higher pitch for a more natural female tone if fallback is used
+
+            utterance.onend = () => {
+                setIsSpeaking(false);
+            };
+
+            utterance.onerror = (err) => {
+                console.error('SpeechSynthesis error:', err);
+                setIsSpeaking(false);
+            };
+
+            window.speechSynthesis.speak(utterance);
         }
     }, [isListening]);
 
-    const stopListening = useCallback(() => {
-        if (!recognitionRef.current) return;
-        if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
-        try {
-            recognitionRef.current.stop();
-        } catch { /* ignore */ }
-    }, []);
-
-    const speak = useCallback((text: string) => {
-        // Stop listening while AI speaks
-        stopListening();
-        window.speechSynthesis.cancel();
-
-        setIsSpeaking(true);
-        const utterance = new SpeechSynthesisUtterance(text);
-
-        // Try to pick a natural English voice
-        const voices = window.speechSynthesis.getVoices();
-        const preferred = voices.find(
-            (v) =>
-                v.lang.startsWith('en') &&
-                (v.name.toLowerCase().includes('female') ||
-                    v.name.toLowerCase().includes('samantha') ||
-                    v.name.toLowerCase().includes('zira') ||
-                    v.name.toLowerCase().includes('google'))
-        );
-        utterance.voice = preferred || voices.find((v) => v.lang.startsWith('en')) || voices[0];
-        utterance.rate = 1.0;
-        utterance.pitch = 1.05;
-
-        utterance.onend = () => {
-            setIsSpeaking(false);
-        };
-
-        utterance.onerror = () => {
-            setIsSpeaking(false);
-        };
-
-        window.speechSynthesis.speak(utterance);
-    }, [stopListening]);
-
     const stopSpeaking = useCallback(() => {
         window.speechSynthesis.cancel();
+        if (currentAudioRef.current) {
+            currentAudioRef.current.pause();
+            currentAudioRef.current.currentTime = 0;
+        }
         setIsSpeaking(false);
     }, []);
 
     const resetTranscript = useCallback(() => {
         setTranscript('');
+        latestTranscriptRef.current = '';
     }, []);
 
     return {

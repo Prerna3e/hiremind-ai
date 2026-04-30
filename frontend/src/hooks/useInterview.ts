@@ -66,6 +66,8 @@ export interface UseInterviewReturn {
     showFeedback: boolean;
     setupData: InterviewSetupData;
     setSetupData: React.Dispatch<React.SetStateAction<InterviewSetupData>>;
+    verdict: string | null;
+    sentiment: string;
     startInterview: () => Promise<void>;
     submitAnswer: (answer: string) => Promise<void>;
     proceedToNextQuestion: () => void;
@@ -94,11 +96,13 @@ export const useInterview = (): UseInterviewReturn => {
     const [error, setError] = useState<string | null>(null);
     const [showFeedback, setShowFeedback] = useState(false);
     const [isFinished, setIsFinished] = useState(false);
+    const [verdict, setVerdict] = useState<string | null>(null);
+    const [sentiment, setSentiment] = useState<string>('Initializing...');
 
     const [setupData, setSetupData] = useState<InterviewSetupData>({
-        role: 'Senior Full Stack Engineer',
-        experienceLevel: 'Senior',
-        techStack: 'React, Node.js, TypeScript',
+        role: '',
+        experienceLevel: '',
+        techStack: '',
         interviewType: 'mixed',
         numberOfQuestions: 10,
         difficulty: 'medium',
@@ -114,6 +118,15 @@ export const useInterview = (): UseInterviewReturn => {
         setError(null);
 
         try {
+            console.log("Sending start interview request with data:", {
+                role: setupData.role,
+                experienceLevel: setupData.experienceLevel,
+                techStack: setupData.interviewType === 'hr' ? '' : setupData.techStack,
+                interviewType: setupData.interviewType,
+                numberOfQuestions: setupData.numberOfQuestions,
+                difficulty: setupData.difficulty,
+            });
+
             const res = await axios.post(
                 `${API_BASE_URL}/interviews/start`,
                 {
@@ -127,6 +140,8 @@ export const useInterview = (): UseInterviewReturn => {
                 getAuthHeaders()
             );
 
+            console.log("Start interview response:", res.data);
+
             setInterviewId(res.data.interviewId);
             // Support both questions array and single currentQuestion field
             const initialQuestion = res.data.questions ? res.data.questions[0] : res.data.currentQuestion;
@@ -137,6 +152,13 @@ export const useInterview = (): UseInterviewReturn => {
             setPhase('interview');
             setIsFinished(false);
         } catch (err: any) {
+            console.error("Start interview failed:", err);
+            if (err.response?.status === 401) {
+                console.warn("Unauthorized! Redirecting to login...");
+                localStorage.removeItem('token');
+                window.location.href = '/login';
+                return;
+            }
             setError(err.response?.data?.message || 'Failed to start interview. Please try again.');
         } finally {
             setLoading(false);
@@ -157,12 +179,13 @@ export const useInterview = (): UseInterviewReturn => {
                 getAuthHeaders()
             );
 
-            const { feedback, nextQuestion, questionNumber: qn, totalQuestions: tq, scores: newScores, scoreDelta, isFinished: done } = res.data;
+            const { feedback, verdict: v, nextQuestion, questionNumber: qn, totalQuestions: tq, scores: newScores, scoreDelta, isFinished: done } = res.data;
 
             // Show feedback first
             setLastFeedback(feedback);
             setLastScoreDelta(scoreDelta);
             setScores(newScores);
+            setVerdict(v);
             setShowFeedback(true);
 
             // Buffer the next question
@@ -170,12 +193,18 @@ export const useInterview = (): UseInterviewReturn => {
                 setNextQuestionBuffer(nextQuestion);
                 setQuestionNumber(qn);
                 setTotalQuestions(tq);
+                setSentiment(res.data.sentiment || 'Observing...');
             }
 
             if (done) {
                 setIsFinished(true);
             }
         } catch (err: any) {
+            if (err.response?.status === 401) {
+                localStorage.removeItem('token');
+                window.location.href = '/login';
+                return;
+            }
             setError(err.response?.data?.message || 'Failed to submit answer. Please try again.');
         } finally {
             setLoading(false);
@@ -217,6 +246,11 @@ export const useInterview = (): UseInterviewReturn => {
             setEvaluation(res.data.evaluation);
             setPhase('summary');
         } catch (err: any) {
+            if (err.response?.status === 401) {
+                localStorage.removeItem('token');
+                window.location.href = '/login';
+                return;
+            }
             setError(err.response?.data?.message || 'Failed to generate evaluation. Please try again.');
         } finally {
             setLoading(false);
@@ -239,6 +273,7 @@ export const useInterview = (): UseInterviewReturn => {
         setError(null);
         setShowFeedback(false);
         setIsFinished(false);
+        setVerdict(null);
     }, []);
 
     // ─── RETRY (same settings) ────────────
@@ -266,6 +301,8 @@ export const useInterview = (): UseInterviewReturn => {
         showFeedback,
         setupData,
         setSetupData,
+        verdict,
+        sentiment,
         startInterview,
         submitAnswer,
         proceedToNextQuestion,

@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-    Upload, FileText, CheckCircle2, AlertTriangle, 
-    Zap, Download, Play, Search, Target, 
-    MessageSquare, RefreshCw, Layers, Sparkles
+    Upload, CheckCircle2, AlertTriangle, 
+    Zap, Search, Target, 
+    RefreshCw, Layers, Sparkles
 } from 'lucide-react';
 import FuturisticLayout from '../components/FuturisticLayout';
 import robotAvatar from '../assets/robot-avatar.png';
@@ -31,7 +31,7 @@ const ResumeAnalysis: React.FC = () => {
 
     return (
         <FuturisticLayout>
-            <div style={{ maxWidth: '1600px', margin: '0 auto' }}>
+            <div className="full-width-container">
                 
                 {/* Header with Role Selection */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
@@ -63,7 +63,7 @@ const ResumeAnalysis: React.FC = () => {
                     </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '450px 1fr', gap: '40px' }}>
+                <div className="grid-sidebar-left">
                     
                     {/* LEFT PANEL: Upload & Preview */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
@@ -204,7 +204,7 @@ const ResumeAnalysis: React.FC = () => {
                                     style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}
                                 >
                                     {/* Main Score & Summary */}
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '30px' }}>
+                                    <div className="grid-1-2-responsive">
                                         <div className="glass neon-border" style={{ padding: '30px', borderRadius: '30px', textAlign: 'center' }}>
                                             <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 800, marginBottom: '20px', fontFamily: 'var(--font-futuristic)' }}>OVERALL SCORE</div>
                                             <div style={{ position: 'relative', display: 'inline-block' }}>
@@ -239,7 +239,7 @@ const ResumeAnalysis: React.FC = () => {
                                     </div>
 
                                     {/* Section-wise Analysis */}
-                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px' }}>
+                                    <div className="grid-cols-4-responsive">
                                         {[
                                             { label: "Skills Match", val: 92, color: 'var(--accent-blue)' },
                                             { label: "Exp Quality", val: 78, color: 'var(--accent-purple)' },
@@ -261,7 +261,7 @@ const ResumeAnalysis: React.FC = () => {
                                     </div>
 
                                     {/* Keywords & Fixes */}
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px' }}>
+                                    <div className="grid-cols-2-responsive">
                                         <div className="glass" style={{ padding: '30px', borderRadius: '30px' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
                                                 <Target size={18} color="var(--accent-cyan)" />
@@ -323,7 +323,7 @@ const ResumeAnalysis: React.FC = () => {
                                     </div>
 
                                     {/* Final Actions */}
-                                    <div style={{ display: 'flex', gap: '20px', marginTop: '10px' }}>
+                                    <div className="action-buttons-container">
                                         <button className="btn-primary" style={{ flex: 1, height: '55px', borderRadius: '15px', background: 'var(--accent-cyan)', color: 'black', fontWeight: 900, fontFamily: 'var(--font-futuristic)', border: 'none' }}>
                                             DOWNLOAD IMPROVED RESUME
                                         </button>

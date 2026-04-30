@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import {
     Plus, History, BarChart2,
     Flame, Trophy, Activity,
@@ -16,7 +16,7 @@ const Dashboard: React.FC = () => {
     const [stats, setStats] = useState({
         completed: 0,
         avgScore: 0,
-        bestPerformance: 'N/A',
+        eliteRating: 0,
         streak: 0
     });
     const [interviews, setInterviews] = useState<any[]>([]);
@@ -27,15 +27,44 @@ const Dashboard: React.FC = () => {
                 const res = await axios.get('http://localhost:5000/api/interviews', {
                     headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
                 });
-                setInterviews(res.data);
+                const completedInterviews = res.data.filter((iv: any) => iv.status === 'completed');
+                setInterviews(completedInterviews);
 
-                if (res.data.length > 0) {
-                    const avg = res.data.reduce((acc: number, curr: any) => acc + (curr.evaluation?.overallScore || 0), 0) / res.data.length;
+                if (completedInterviews.length > 0) {
+                    const avg = completedInterviews.reduce((acc: number, curr: any) => acc + (curr.evaluation?.overallScore || 0), 0) / completedInterviews.length;
+                    const best = Math.max(...completedInterviews.map((iv: any) => iv.evaluation?.overallScore || 0));
+                    
+                    // Calculate Streak
+                    const dates = completedInterviews.map((iv: any) => new Date(iv.createdAt).toDateString());
+                    const uniqueDates = Array.from(new Set<string>(dates)).map((d: string) => new Date(d));
+                    uniqueDates.sort((a, b) => b.getTime() - a.getTime());
+                    
+                    let streak = 0;
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    
+                    // Check if they did one today or yesterday to start the streak
+                    const firstDate = uniqueDates[0];
+                    if (firstDate) {
+                        const diff = (today.getTime() - firstDate.getTime()) / (1000 * 3600 * 24);
+                        if (diff <= 1) {
+                            streak = 1;
+                            for (let i = 1; i < uniqueDates.length; i++) {
+                                const diffPrev = (uniqueDates[i-1].getTime() - uniqueDates[i].getTime()) / (1000 * 3600 * 24);
+                                if (diffPrev === 1) {
+                                    streak++;
+                                } else {
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
                     setStats({
-                        completed: res.data.length,
+                        completed: completedInterviews.length,
                         avgScore: Math.round(avg),
-                        bestPerformance: 'Google SDE-2',
-                        streak: 3
+                        eliteRating: best,
+                        streak: streak
                     });
                 }
             } catch (err) {
@@ -47,7 +76,7 @@ const Dashboard: React.FC = () => {
 
     return (
         <FuturisticLayout>
-            <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+            <div className="full-width-container">
                 <header style={{ marginBottom: '48px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '10px' }}>
                         <Sparkles size={24} color="var(--accent-cyan)" />
@@ -61,11 +90,11 @@ const Dashboard: React.FC = () => {
                 </header>
 
                 {/* Stats Grid */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px', marginBottom: '48px' }}>
+                <div className="stats-grid">
                     {[
                         { label: "Sessions", value: stats.completed, suffix: "", icon: <History />, color: 'var(--accent-blue)' },
                         { label: "Avg Precision", value: stats.avgScore, suffix: "%", icon: <BarChart2 />, color: 'var(--accent-cyan)' },
-                        { label: "Elite Rating", value: 88, suffix: "%", icon: <Trophy />, color: 'var(--accent-purple)' },
+                        { label: "Elite Rating", value: stats.eliteRating, suffix: "%", icon: <Trophy />, color: 'var(--accent-purple)' },
                         { label: "Synergy Streak", value: stats.streak, suffix: "d", icon: <Flame />, color: 'var(--accent-gold)' }
                     ].map((stat, i) => (
                         <motion.div 
@@ -92,29 +121,39 @@ const Dashboard: React.FC = () => {
 
                 {/* New Interview CTA */}
                 <motion.div
-                    whileHover={{ scale: 1.01, boxShadow: '0 0 40px rgba(59, 123, 246, 0.3)' }}
+                    whileHover={{ scale: 1.01, boxShadow: '0 0 50px rgba(59, 123, 246, 0.2)' }}
                     whileTap={{ scale: 0.99 }}
                     onClick={() => navigate('/interview')}
+                    className="glass neon-border"
                     style={{
-                        background: 'linear-gradient(135deg, #050810, #0C1220)',
-                        border: '1px solid var(--accent-blue)',
-                        padding: '60px', borderRadius: '30px', marginBottom: '48px',
+                        background: 'linear-gradient(135deg, rgba(5, 8, 16, 0.8), rgba(12, 18, 32, 0.9))',
+                        padding: '80px 60px', borderRadius: '40px', marginBottom: '48px',
                         cursor: 'pointer', position: 'relative', overflow: 'hidden'
                     }}
                 >
-                    <div className="hologram-grid" style={{ position: 'absolute', inset: 0, opacity: 0.2 }}></div>
+                    <div className="hologram-grid" style={{ position: 'absolute', inset: 0, opacity: 0.1 }}></div>
                     <div style={{ position: 'relative', zIndex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div>
-                            <h2 style={{ fontSize: '2.8rem', fontWeight: 900, color: 'white', marginBottom: '15px', fontFamily: 'var(--font-futuristic)', letterSpacing: '2px' }}>
-                                INITIATE NEW SESSION <span style={{ color: 'var(--accent-cyan)' }}>→</span>
+                        <div style={{ maxWidth: '70%' }}>
+                            <h2 style={{ fontSize: '3.2rem', fontWeight: 900, color: 'white', marginBottom: '20px', fontFamily: 'var(--font-futuristic)', letterSpacing: '3px' }}>
+                                INITIATE <span style={{ color: 'var(--accent-cyan)' }}>SESSION</span>
                             </h2>
-                            <p style={{ color: 'var(--text-secondary)', fontSize: '1.2rem', fontWeight: 500, maxWidth: '600px' }}>
+                            <p style={{ color: 'var(--text-secondary)', fontSize: '1.2rem', fontWeight: 400, lineHeight: 1.6 }}>
                                 Deploy your skills against our advanced AI models. Real-time feedback, behavioral analysis, and technical vetting.
                             </p>
                         </div>
-                        <div style={{ width: '100px', height: '100px', borderRadius: '50%', background: 'rgba(59, 123, 246, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--accent-blue)' }}>
-                            <Plus size={50} color="var(--accent-blue)" />
-                        </div>
+                        <motion.div 
+                            animate={{ rotate: 360 }}
+                            transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
+                            style={{ 
+                                width: '120px', height: '120px', borderRadius: '50%', 
+                                background: 'rgba(59, 123, 246, 0.05)', display: 'flex', 
+                                alignItems: 'center', justifyContent: 'center', 
+                                border: '1px solid rgba(59, 123, 246, 0.2)',
+                                boxShadow: '0 0 30px rgba(59, 123, 246, 0.1)'
+                            }}
+                        >
+                            <Plus size={60} color="var(--accent-blue)" strokeWidth={1} />
+                        </motion.div>
                     </div>
                 </motion.div>
 
@@ -130,20 +169,16 @@ const Dashboard: React.FC = () => {
                             <motion.div 
                                 key={i} 
                                 whileHover={{ background: 'rgba(255,255,255,0.03)', x: 10 }}
-                                style={{
-                                    display: 'grid', gridTemplateColumns: 'auto 1fr 1fr 1fr auto', alignItems: 'center',
-                                    padding: '20px 30px', borderRadius: '20px', background: 'rgba(255,255,255,0.01)',
-                                    border: '1px solid rgba(255,255,255,0.05)', transition: 'all 0.2s ease', cursor: 'pointer'
-                                }}
+                                className="history-grid-item"
                             >
-                                <div style={{ width: '45px', height: '45px', borderRadius: '12px', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginRight: '20px', border: '1px solid var(--border)' }}>
+                                <div className="icon-col" style={{ width: '45px', height: '45px', borderRadius: '12px', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginRight: '20px', border: '1px solid var(--border)' }}>
                                     <Activity size={22} color="var(--accent-cyan)" />
                                 </div>
                                 <div>
                                     <div style={{ fontWeight: 800, color: 'white', fontSize: '1rem' }}>{iv.role || 'Google SDE-2'}</div>
                                     <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 600 }}>{iv.interviewType || 'Technical'}</div>
                                 </div>
-                                <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: 600, fontFamily: 'var(--font-mono)' }}>{new Date(iv.createdAt).toLocaleDateString()}</div>
+                                <div className="hide-on-mobile" style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: 600, fontFamily: 'var(--font-mono)' }}>{new Date(iv.createdAt).toLocaleDateString()}</div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                                     <div style={{ width: '40px', height: '40px', borderRadius: '50%', border: '2px solid var(--accent-blue)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 900, color: 'white', fontFamily: 'var(--font-mono)' }}>{iv.evaluation?.overallScore || 0}</div>
                                     <span style={{ fontSize: '0.65rem', fontWeight: 900, padding: '6px 15px', borderRadius: '100px', background: (iv.evaluation?.overallScore || 0) > 70 ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)', color: (iv.evaluation?.overallScore || 0) > 70 ? '#22c55e' : '#EF4444', fontFamily: 'var(--font-futuristic)', border: `1px solid ${(iv.evaluation?.overallScore || 0) > 70 ? 'rgba(34,197,94,0.2)' : 'rgba(239,68,68,0.2)'}` }}>

@@ -15,6 +15,29 @@ interface InterviewSetupProps {
 
 const InterviewSetup: React.FC<InterviewSetupProps> = ({ setupData, setSetupData, onStart, loading }) => {
     const [setupStep, setSetupStep] = React.useState(1);
+    const [selectedTechs, setSelectedTechs] = React.useState<string[]>([]);
+
+    const roleOptions = [
+        'Frontend Engineer',
+        'Backend Engineer',
+        'Full Stack Engineer',
+        'DevOps / SRE',
+        'Data Engineer',
+        'ML / AI Engineer',
+    ];
+
+    const techOptions = [
+        'React', 'Node.js', 'TypeScript', 'Python', 'Java',
+        'AWS', 'Docker', 'Kubernetes', 'PostgreSQL', 'MongoDB',
+    ];
+
+    const toggleTech = (tech: string) => {
+        const updated = selectedTechs.includes(tech)
+            ? selectedTechs.filter(t => t !== tech)
+            : [...selectedTechs, tech];
+        setSelectedTechs(updated);
+        setSetupData(prev => ({ ...prev, techStack: updated.join(', ') }));
+    };
 
     const interviewTypes = [
         { value: 'technical' as const, label: 'Technical', icon: <Code2 size={22} />, desc: 'DSA, System Design, Coding' },
@@ -38,7 +61,8 @@ const InterviewSetup: React.FC<InterviewSetupProps> = ({ setupData, setSetupData
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95 }}
-            style={{ maxWidth: '900px', margin: '0 auto', paddingBottom: '60px' }}
+            className="full-width-container"
+            style={{ maxWidth: '1000px', margin: '0 auto', paddingBottom: '100px' }}
         >
             {/* Progress Steps */}
             <div style={{
@@ -98,46 +122,87 @@ const InterviewSetup: React.FC<InterviewSetupProps> = ({ setupData, setSetupData
                             What role are you preparing for?
                         </h2>
 
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
                             <div>
                                 <label style={labelStyle}>Target Role</label>
-                                <input
-                                    value={setupData.role}
-                                    onChange={e => setSetupData(prev => ({ ...prev, role: e.target.value }))}
-                                    placeholder="e.g. Senior Full Stack Engineer"
-                                    style={{ width: '100%', padding: '16px 20px', fontSize: '1.1rem' }}
-                                />
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '15px' }}>
+                                    {roleOptions.map(role => (
+                                        <motion.button
+                                            key={role}
+                                            whileHover={{ scale: 1.02, boxShadow: '0 0 20px rgba(59,123,246,0.1)' }}
+                                            whileTap={{ scale: 0.98 }}
+                                            onClick={() => setSetupData(prev => ({ ...prev, role }))}
+                                            style={{
+                                                padding: '18px 15px',
+                                                borderRadius: '20px',
+                                                background: setupData.role === role ? 'rgba(59,123,246,0.1)' : 'var(--bg-secondary)',
+                                                border: `1px solid ${setupData.role === role ? 'var(--accent-blue)' : 'var(--border)'}`,
+                                                color: setupData.role === role ? 'white' : 'var(--text-secondary)',
+                                                cursor: 'pointer', fontSize: '0.9rem', fontWeight: 700,
+                                                transition: 'all 0.2s ease', textAlign: 'center',
+                                            }}
+                                        >
+                                            {role}
+                                        </motion.button>
+                                    ))}
+                                </div>
                             </div>
                             <div>
                                 <label style={labelStyle}>Experience Level</label>
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '15px' }}>
                                     {experienceLevels.map(level => (
-                                        <button
+                                        <motion.button
                                             key={level}
+                                            whileHover={{ scale: 1.02 }}
+                                            whileTap={{ scale: 0.98 }}
                                             onClick={() => setSetupData(prev => ({ ...prev, experienceLevel: level }))}
                                             style={{
-                                                padding: '14px 8px', borderRadius: '14px',
-                                                background: setupData.experienceLevel === level ? 'rgba(59,123,246,0.15)' : 'var(--bg-secondary)',
+                                                padding: '18px 10px', borderRadius: '20px',
+                                                background: setupData.experienceLevel === level ? 'rgba(59,123,246,0.1)' : 'var(--bg-secondary)',
                                                 border: `1px solid ${setupData.experienceLevel === level ? 'var(--accent-blue)' : 'var(--border)'}`,
                                                 color: setupData.experienceLevel === level ? 'white' : 'var(--text-secondary)',
-                                                cursor: 'pointer', fontSize: '0.85rem', fontWeight: 700,
+                                                cursor: 'pointer', fontSize: '0.9rem', fontWeight: 700,
                                                 transition: 'all 0.2s ease',
                                             }}
                                         >
                                             {level.split(' / ')[0]}
-                                        </button>
+                                        </motion.button>
                                     ))}
                                 </div>
                             </div>
                             {setupData.interviewType !== 'hr' && (
                                 <div>
-                                    <label style={labelStyle}>Tech Stack</label>
-                                    <input
-                                        value={setupData.techStack}
-                                        onChange={e => setSetupData(prev => ({ ...prev, techStack: e.target.value }))}
-                                        placeholder="React, Node.js, TypeScript, AWS..."
-                                        style={{ width: '100%', padding: '16px 20px', fontSize: '1.1rem' }}
-                                    />
+                                    <label style={labelStyle}>Tech Stack <span style={{ color: 'var(--accent-cyan)', fontWeight: 600, textTransform: 'none', letterSpacing: 0 }}>— pick all that apply</span></label>
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                                        {techOptions.map(tech => {
+                                            const isSelected = selectedTechs.includes(tech);
+                                            return (
+                                                <motion.button
+                                                    key={tech}
+                                                    whileHover={{ scale: 1.05 }}
+                                                    whileTap={{ scale: 0.95 }}
+                                                    onClick={() => toggleTech(tech)}
+                                                    style={{
+                                                        padding: '10px 20px',
+                                                        borderRadius: '100px',
+                                                        background: isSelected ? 'rgba(6,214,199,0.12)' : 'var(--bg-secondary)',
+                                                        border: `1px solid ${isSelected ? 'var(--accent-cyan)' : 'var(--border)'}`,
+                                                        color: isSelected ? 'var(--accent-cyan)' : 'var(--text-secondary)',
+                                                        cursor: 'pointer', fontSize: '0.85rem', fontWeight: 700,
+                                                        transition: 'all 0.2s ease',
+                                                        boxShadow: isSelected ? '0 0 10px rgba(6,214,199,0.15)' : 'none',
+                                                    }}
+                                                >
+                                                    {isSelected ? '✓ ' : ''}{tech}
+                                                </motion.button>
+                                            );
+                                        })}
+                                    </div>
+                                    {selectedTechs.length === 0 && (
+                                        <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '8px', fontWeight: 600 }}>
+                                            Select at least one technology
+                                        </p>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -299,46 +364,78 @@ const InterviewSetup: React.FC<InterviewSetupProps> = ({ setupData, setSetupData
                 )}
 
                 {/* Navigation Buttons */}
-                <div style={{ marginTop: '48px', display: 'flex', gap: '16px' }}>
-                    {setupStep > 1 && (
-                        <motion.button
-                            whileTap={{ scale: 0.97 }}
-                            className="btn-secondary"
-                            onClick={() => setSetupStep(s => s - 1)}
-                            style={{ flex: 1, height: '56px', fontSize: '1rem' }}
-                        >
-                            Back
-                        </motion.button>
-                    )}
-                    <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.97 }}
-                        className="btn-primary"
-                        onClick={() => setupStep < 3 ? setSetupStep(setupStep + 1) : onStart()}
-                        disabled={loading}
-                        style={{
-                            flex: 2, height: '60px', fontSize: '1.1rem',
-                            background: setupStep === 3
-                                ? 'linear-gradient(135deg, var(--accent-blue), var(--accent-purple))'
-                                : 'var(--accent-blue)',
-                            boxShadow: setupStep === 3 ? '0 8px 32px rgba(139, 92, 246, 0.3)' : 'var(--shadow-glow-blue)',
-                        }}
-                    >
-                        {loading ? (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                <motion.div
-                                    animate={{ rotate: 360 }}
-                                    transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                                    style={{ width: '20px', height: '20px', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: 'white', borderRadius: '50%' }}
-                                />
-                                Generating your interview...
-                            </div>
-                        ) : setupStep < 3 ? (
-                            <>Continue <ChevronRight size={20} /></>
-                        ) : (
-                            <>Start Interview with Maya <Sparkles size={20} /></>
+                <div style={{ marginTop: '48px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div style={{ display: 'flex', gap: '16px' }}>
+                        {setupStep > 1 && (
+                            <motion.button
+                                whileTap={{ scale: 0.97 }}
+                                className="btn-secondary"
+                                onClick={() => setSetupStep(s => s - 1)}
+                                style={{ flex: 1, height: '56px', fontSize: '1rem' }}
+                            >
+                                Back
+                            </motion.button>
                         )}
-                    </motion.button>
+                        <motion.button
+                            whileHover={!((setupStep === 1 && (!setupData.role || !setupData.experienceLevel || (setupData.interviewType !== 'hr' && setupData.techStack.length === 0))) ||
+                                          (setupStep === 2 && (!setupData.interviewType || !setupData.numberOfQuestions)) ||
+                                          (setupStep === 3 && !setupData.difficulty)) ? { scale: 1.02 } : {}}
+                            whileTap={!((setupStep === 1 && (!setupData.role || !setupData.experienceLevel || (setupData.interviewType !== 'hr' && setupData.techStack.length === 0))) ||
+                                          (setupStep === 2 && (!setupData.interviewType || !setupData.numberOfQuestions)) ||
+                                          (setupStep === 3 && !setupData.difficulty)) ? { scale: 0.97 } : {}}
+                            className="btn-primary"
+                            onClick={() => {
+                                if (setupStep === 1) {
+                                    if (!setupData.role || !setupData.experienceLevel) return;
+                                    if (setupData.interviewType !== 'hr' && setupData.techStack.length === 0) return;
+                                }
+                                if (setupStep === 2) {
+                                    if (!setupData.interviewType || !setupData.numberOfQuestions) return;
+                                }
+                                setupStep < 3 ? setSetupStep(setupStep + 1) : onStart();
+                            }}
+                            disabled={loading || 
+                                (setupStep === 1 && (!setupData.role || !setupData.experienceLevel || (setupData.interviewType !== 'hr' && setupData.techStack.length === 0))) ||
+                                (setupStep === 2 && (!setupData.interviewType || !setupData.numberOfQuestions)) ||
+                                (setupStep === 3 && !setupData.difficulty)
+                            }
+                            style={{
+                                flex: 2, height: '60px', fontSize: '1.1rem',
+                                background: setupStep === 3
+                                    ? 'linear-gradient(135deg, var(--accent-blue), var(--accent-purple))'
+                                    : 'var(--accent-blue)',
+                                boxShadow: setupStep === 3 ? '0 8px 32px rgba(139, 92, 246, 0.3)' : 'var(--shadow-glow-blue)',
+                                opacity: ((setupStep === 1 && (!setupData.role || !setupData.experienceLevel || (setupData.interviewType !== 'hr' && setupData.techStack.length === 0))) ||
+                                          (setupStep === 2 && (!setupData.interviewType || !setupData.numberOfQuestions)) ||
+                                          (setupStep === 3 && !setupData.difficulty)) ? 0.5 : 1,
+                                cursor: ((setupStep === 1 && (!setupData.role || !setupData.experienceLevel || (setupData.interviewType !== 'hr' && setupData.techStack.length === 0))) ||
+                                         (setupStep === 2 && (!setupData.interviewType || !setupData.numberOfQuestions)) ||
+                                         (setupStep === 3 && !setupData.difficulty)) ? 'not-allowed' : 'pointer',
+                            }}
+                        >
+                            {loading ? (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <motion.div
+                                        animate={{ rotate: 360 }}
+                                        transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                                        style={{ width: '20px', height: '20px', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: 'white', borderRadius: '50%' }}
+                                    />
+                                    Generating your interview...
+                                </div>
+                            ) : setupStep < 3 ? (
+                                <>Continue <ChevronRight size={20} /></>
+                            ) : (
+                                <>Start Interview with Maya <Sparkles size={20} /></>
+                            )}
+                        </motion.button>
+                    </div>
+                    {setupStep === 1 && (!setupData.role || !setupData.experienceLevel || (setupData.interviewType !== 'hr' && setupData.techStack.length === 0)) && (
+                        <p style={{ color: '#ef4444', fontSize: '0.75rem', textAlign: 'center', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                            {!setupData.role ? 'Please select a target role' : 
+                             !setupData.experienceLevel ? 'Please select an experience level' :
+                             'Please select at least one tech stack'}
+                        </p>
+                    )}
                 </div>
             </div>
         </motion.div>
