@@ -24,7 +24,7 @@ const Dashboard: React.FC = () => {
     useEffect(() => {
         const fetchDashboardData = async () => {
             try {
-                const res = await axios.get('http://localhost:5000/api/interviews', {
+                const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/interviews`, {
                     headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
                 });
                 const completedInterviews = res.data.filter((iv: any) => iv.status === 'completed');
