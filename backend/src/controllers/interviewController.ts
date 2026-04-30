@@ -1,69 +1,87 @@
 import { Request, Response } from "express";
 import Interview from "../models/Interview.js";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import {
   buildInterviewPrompt,
   buildEvaluationPrompt,
 } from "../utils/prompts.js";
 import User from "../models/User.js";
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+const TOGETHER_API_KEY = process.env.TOGETHER_API_KEY || "";
+const TOGETHER_API_URL = "https://api.together.xyz/v1/chat/completions";
 
-/** Helper: call Gemini and parse a JSON response with model fallback */
-async function callGeminiJSON(
+/** Helper: call Together AI and parse a JSON response */
+async function callTogetherAI(
   systemPrompt: string,
   userMessage: string,
 ): Promise<any> {
-  const models = [
-    "gemini-1.5-flash",
-    "gemini-1.5-flash-8b",
-    "gemini-2.5-flash",
-  ];
+  const model = "meta-llama/Llama-3.3-70B-Instruct-Turbo";
   const fullPrompt = `${systemPrompt}\n\nIMPORTANT: Respond ONLY with valid JSON. No markdown, no code fences, no extra text.\n\n${userMessage}`;
 
-  let lastError = null;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 30000);
 
-  for (const modelName of models) {
-    try {
-      console.log(`Attempting AI call with model: ${modelName}`);
-      const model = genAI.getGenerativeModel({ 
-        model: modelName,
-        safetySettings: [
-            { category: "HARM_CATEGORY_HARASSMENT" as any, threshold: "BLOCK_NONE" as any },
-            { category: "HARM_CATEGORY_HATE_SPEECH" as any, threshold: "BLOCK_NONE" as any },
-            { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT" as any, threshold: "BLOCK_NONE" as any },
-            { category: "HARM_CATEGORY_DANGEROUS_CONTENT" as any, threshold: "BLOCK_NONE" as any },
-        ]
-      });
-      const result = await model.generateContent(fullPrompt);
-      const text = result.response.text().trim();
+  try {
+    console.log(`Calling Together AI model: ${model}`);
+    const response = await fetch(TOGETHER_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${TOGETHER_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userMessage },
+        ],
+        max_tokens: 1024,
+        temperature: 0.3,
+        top_p: 0.9,
+        stream: false,
+      }),
+      signal: controller.signal,
+    });
 
-      // JSON extraction
-      let clean = text;
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        clean = jsonMatch[0];
-      }
+    clearTimeout(timeout);
 
-      return JSON.parse(clean);
-    } catch (err: any) {
-      console.warn(`Model ${modelName} failed:`, err.message);
-      lastError = err;
-      // Continue to next model if it's a 503/429/quota error
-      if (err.message.includes("503") || err.message.includes("429") || err.message.includes("limit") || err.message.includes("quota")) {
-        continue;
-      }
-      console.error("Fatal AI Error. Will try next model anyway just in case.");
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Together API error ${response.status}: ${errorText}`);
     }
-  }
 
-  throw lastError;
+    const data = await response.json();
+    const text = data.choices?.[0]?.message?.content?.trim() || "";
+
+    // JSON extraction
+    let clean = text;
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      clean = jsonMatch[0];
+    }
+
+    try {
+      return JSON.parse(clean);
+    } catch (parseErr) {
+      console.error("Failed to parse AI JSON. Raw text:", text);
+      // Attempt a more aggressive clean if it's just markdown fences
+      const ultraClean = clean.replace(/```json|```/g, "").trim();
+      try {
+        return JSON.parse(ultraClean);
+      } catch (e) {
+        throw new Error("AI returned an invalid JSON format. Please try again.");
+      }
+    }
+  } catch (err: any) {
+    console.error("Together AI error:", err.message);
+    throw err;
+  }
 }
 
-// Helper to sanitize score numbers
-const clampDelta = (val: any) => {
-  const num = parseInt(val, 10);
-  return isNaN(num) ? 0 : Math.max(-5, Math.min(5, num));
+// Helper to sanitize score numbers — clamp to AI spec range (-15 to +20)
+const clampDelta = (val: any): number => {
+  const n = Number(val);
+  if (isNaN(n)) return 0;
+  return Math.max(-15, Math.min(20, n));
 };
 
 // ═══════════════════════════════════════════════════════════
@@ -114,7 +132,7 @@ const startInterview = async (req: any, res: Response) => {
 
     try {
       console.log("Calling Gemini for first question...");
-      const parsed = await callGeminiJSON(
+      const parsed = await callTogetherAI(
         prompt,
         `[Interview starting. This is the first message. Generate a warm greeting and the first question for ${candidateName} applying for ${role}.]`,
       );
@@ -220,13 +238,11 @@ const submitAnswer = async (req: any, res: Response) => {
 
     let aiResponse = {
       next_question: `I'm interested in hearing more about your experience as a ${interview.role}. Could you describe a particularly complex challenge you faced in your work and how you approached it?`,
-      verdict: "Good",
+      verdict: "Mediocre",
       feedback_on_last_answer: {
-        positive:
-          "You provided a coherent response that touched on the key aspects of the role.",
-        improvement:
-          "To make your answer stronger, try to use more specific technical details or the STAR method for behavioral examples.",
-        score_delta: { technical: 2, communication: 1, confidence: 1 },
+        positive: "I'm still calibrating my assessment of your technical depth.",
+        improvement: "I need you to be much more specific. Use technical terms and describe the actual results of your work. Don't just give surface-level explanations.",
+        score_delta: { technical: 0, communication: 0, confidence: 0 },
       },
       is_interview_complete: isLastQuestion,
     };
@@ -240,7 +256,7 @@ const submitAnswer = async (req: any, res: Response) => {
         )
         .join("\n");
 
-      const parsed = await callGeminiJSON(prompt, conversationHistory);
+      const parsed = await callTogetherAI(prompt, conversationHistory);
 
       // Validate and sanitize the AI response
       if (parsed.next_question) aiResponse.next_question = parsed.next_question;
@@ -406,7 +422,7 @@ const evaluateInterview = async (req: any, res: Response) => {
     };
 
     try {
-      const parsed = await callGeminiJSON(
+      const parsed = await callTogetherAI(
         evalPrompt,
         "Generate the full evaluation report as JSON.",
       );
@@ -460,12 +476,6 @@ const getAllCandidates = async (req: any, res: Response) => {
 // ═══════════════════════════════════════════════════════════
 // HELPERS
 // ═══════════════════════════════════════════════════════════
-
-function clampDelta(val: any): number {
-  const n = Number(val);
-  if (isNaN(n)) return 0;
-  return Math.max(-15, Math.min(20, n));
-}
 
 function clampScore(val: number): number {
   return Math.max(0, Math.min(100, Math.round(val)));

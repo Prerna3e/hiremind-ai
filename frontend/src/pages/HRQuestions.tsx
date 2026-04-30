@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { 
-    Search, Filter, Brain, Sparkles, 
-    MessageSquare, Play, Send, Zap, BookOpen, Clock, 
-    Trophy, Flame, Bookmark, ChevronLeft, 
+    Search, Brain, Sparkles, MessageSquare,
+    Play, Zap, 
+    Trophy, Flame, ChevronLeft, 
     Lightbulb, Info, FileText, CheckCircle2,
     Users, Target, Award, Heart
 } from 'lucide-react';
@@ -63,7 +63,7 @@ const HRQuestions: React.FC = () => {
 
     return (
         <FuturisticLayout>
-            <div style={{ maxWidth: '1600px', margin: '0 auto' }}>
+            <div className="full-width-container">
                 
                 {selectedQuestion ? (
                     // ═══════════════════════════════════════════════════════════
@@ -93,7 +93,7 @@ const HRQuestions: React.FC = () => {
                             </div>
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 400px', gap: '30px' }}>
+                        <div className="grid-sidebar-right">
                             {/* Left: Question Analysis */}
                             <div className="glass" style={{ padding: '40px', borderRadius: '30px' }}>
                                 <div style={{ marginBottom: '30px' }}>
@@ -254,7 +254,7 @@ const HRQuestions: React.FC = () => {
                         </div>
 
                         {/* Achievements */}
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginTop: '20px' }}>
+                        <div className="grid-cols-4-responsive" style={{ marginTop: '20px' }}>
                             {[
                                 { icon: <Trophy color="var(--accent-gold)" />, label: "Storyteller", val: "5/20" },
                                 { icon: <Award color="var(--accent-purple)" />, label: "Self-Aware", val: "12/20" },

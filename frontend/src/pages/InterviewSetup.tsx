@@ -61,7 +61,8 @@ const InterviewSetup: React.FC<InterviewSetupProps> = ({ setupData, setSetupData
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95 }}
-            style={{ maxWidth: '900px', margin: '0 auto', paddingBottom: '60px' }}
+            className="full-width-container"
+            style={{ maxWidth: '1000px', margin: '0 auto', paddingBottom: '100px' }}
         >
             {/* Progress Steps */}
             <div style={{
@@ -121,25 +122,24 @@ const InterviewSetup: React.FC<InterviewSetupProps> = ({ setupData, setSetupData
                             What role are you preparing for?
                         </h2>
 
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
                             <div>
                                 <label style={labelStyle}>Target Role</label>
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '15px' }}>
                                     {roleOptions.map(role => (
                                         <motion.button
                                             key={role}
-                                            whileHover={{ scale: 1.02 }}
+                                            whileHover={{ scale: 1.02, boxShadow: '0 0 20px rgba(59,123,246,0.1)' }}
                                             whileTap={{ scale: 0.98 }}
                                             onClick={() => setSetupData(prev => ({ ...prev, role }))}
                                             style={{
-                                                padding: '14px 12px',
-                                                borderRadius: '14px',
-                                                background: setupData.role === role ? 'rgba(59,123,246,0.15)' : 'var(--bg-secondary)',
+                                                padding: '18px 15px',
+                                                borderRadius: '20px',
+                                                background: setupData.role === role ? 'rgba(59,123,246,0.1)' : 'var(--bg-secondary)',
                                                 border: `1px solid ${setupData.role === role ? 'var(--accent-blue)' : 'var(--border)'}`,
                                                 color: setupData.role === role ? 'white' : 'var(--text-secondary)',
-                                                cursor: 'pointer', fontSize: '0.85rem', fontWeight: 700,
+                                                cursor: 'pointer', fontSize: '0.9rem', fontWeight: 700,
                                                 transition: 'all 0.2s ease', textAlign: 'center',
-                                                boxShadow: setupData.role === role ? '0 0 12px rgba(59,123,246,0.2)' : 'none',
                                             }}
                                         >
                                             {role}
@@ -149,22 +149,24 @@ const InterviewSetup: React.FC<InterviewSetupProps> = ({ setupData, setSetupData
                             </div>
                             <div>
                                 <label style={labelStyle}>Experience Level</label>
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '15px' }}>
                                     {experienceLevels.map(level => (
-                                        <button
+                                        <motion.button
                                             key={level}
+                                            whileHover={{ scale: 1.02 }}
+                                            whileTap={{ scale: 0.98 }}
                                             onClick={() => setSetupData(prev => ({ ...prev, experienceLevel: level }))}
                                             style={{
-                                                padding: '14px 8px', borderRadius: '14px',
-                                                background: setupData.experienceLevel === level ? 'rgba(59,123,246,0.15)' : 'var(--bg-secondary)',
+                                                padding: '18px 10px', borderRadius: '20px',
+                                                background: setupData.experienceLevel === level ? 'rgba(59,123,246,0.1)' : 'var(--bg-secondary)',
                                                 border: `1px solid ${setupData.experienceLevel === level ? 'var(--accent-blue)' : 'var(--border)'}`,
                                                 color: setupData.experienceLevel === level ? 'white' : 'var(--text-secondary)',
-                                                cursor: 'pointer', fontSize: '0.85rem', fontWeight: 700,
+                                                cursor: 'pointer', fontSize: '0.9rem', fontWeight: 700,
                                                 transition: 'all 0.2s ease',
                                             }}
                                         >
                                             {level.split(' / ')[0]}
-                                        </button>
+                                        </motion.button>
                                     ))}
                                 </div>
                             </div>

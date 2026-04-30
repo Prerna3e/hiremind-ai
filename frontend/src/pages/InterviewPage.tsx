@@ -1,14 +1,16 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { BrainCircuit, Clock, Loader2, AlertCircle } from 'lucide-react';
+import { BrainCircuit, Clock, Loader2, AlertCircle, LayoutDashboard } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useInterview } from '../hooks/useInterview';
 import { useVoice } from '../hooks/useVoice';
 import InterviewSetup from './InterviewSetup';
 import InterviewSession from './InterviewSession';
 import InterviewSummary from './InterviewSummary';
+import Sidebar from '../components/Sidebar';
 
 const InterviewPage: React.FC = () => {
+    const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
     const navigate = useNavigate();
 
     const interview = useInterview();
@@ -24,6 +26,8 @@ const InterviewPage: React.FC = () => {
             background: '#050810', minHeight: '100vh', color: 'white',
             position: 'relative', overflow: 'hidden',
         }}>
+            <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+            
             {/* Ambient Background Orbs */}
             <div style={{
                 position: 'fixed', top: '-10%', left: '-10%', width: '40%', height: '40%',
@@ -48,18 +52,26 @@ const InterviewPage: React.FC = () => {
                 padding: '0 40px', position: 'relative', zIndex: 10,
                 background: 'rgba(5, 8, 16, 0.6)', backdropFilter: 'blur(20px)',
             }}>
-                <Link to="/dashboard" style={{ display: 'flex', alignItems: 'center', gap: '16px', textDecoration: 'none', color: 'inherit' }}>
-                    <div style={{
-                        width: '32px', height: '32px', borderRadius: '8px',
-                        background: 'var(--accent-blue)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    }}>
-                        <BrainCircuit size={18} color="white" />
-                    </div>
-                    <span style={{ fontWeight: 800, fontSize: '1.15rem', letterSpacing: '-0.02em' }}>
-                        HireMind <span style={{ color: 'var(--accent-cyan)' }}>AI</span>
-                    </span>
-                </Link>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                    <button 
+                        onClick={() => setIsSidebarOpen(true)}
+                        style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', borderRadius: '10px', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', cursor: 'pointer' }}
+                    >
+                        <LayoutDashboard size={20} />
+                    </button>
+                    <Link to="/dashboard" style={{ display: 'flex', alignItems: 'center', gap: '16px', textDecoration: 'none', color: 'inherit' }}>
+                        <div style={{
+                            width: '32px', height: '32px', borderRadius: '8px',
+                            background: 'var(--accent-blue)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}>
+                            <BrainCircuit size={18} color="white" />
+                        </div>
+                        <span style={{ fontWeight: 800, fontSize: '1.15rem', letterSpacing: '-0.02em' }}>
+                            HireMind <span style={{ color: 'var(--accent-cyan)' }}>AI</span>
+                        </span>
+                    </Link>
+                </div>
 
                 {interview.phase === 'interview' && (
                     <div style={{
@@ -122,7 +134,7 @@ const InterviewPage: React.FC = () => {
             )}
 
             {/* Main Content */}
-            <main className="container" style={{
+            <main className="full-width-container" style={{
                 position: 'relative', zIndex: 1, paddingTop: '40px',
             }}>
                 <AnimatePresence mode="wait">
@@ -164,6 +176,7 @@ const InterviewPage: React.FC = () => {
                             voiceSupported={voice.isSupported}
                             setupData={interview.setupData}
                             verdict={interview.verdict}
+                            sentiment={interview.sentiment}
                         />
                     )}
 

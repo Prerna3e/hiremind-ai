@@ -1,0 +1,6 @@
+{
+  "statusLine": {
+    "type": "command",
+    "command": "bash \"D:/Web Dev/claudeCode/.claude/statusline.sh\""
+  }
+}
