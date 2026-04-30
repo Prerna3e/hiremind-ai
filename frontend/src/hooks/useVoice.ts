@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { API_BASE_URL } from '../api';
 
 interface UseVoiceReturn {
     isListening: boolean;
@@ -175,7 +176,7 @@ export const useVoice = (onAutoSubmit?: (transcript: string) => void): UseVoiceR
         setIsSpeaking(true);
 
         try {
-            const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/speech/speak`, {
+            const response = await fetch(`${API_BASE_URL}/speech/speak`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ text, persona })

@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
+import { API_BASE_URL } from '../api';
 import FuturisticLayout from '../components/FuturisticLayout';
 
 const Dashboard: React.FC = () => {
@@ -24,7 +25,7 @@ const Dashboard: React.FC = () => {
     useEffect(() => {
         const fetchDashboardData = async () => {
             try {
-                const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/interviews`, {
+                const res = await axios.get(`${API_BASE_URL}/interviews`, {
                     headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
                 });
                 const completedInterviews = res.data.filter((iv: any) => iv.status === 'completed');
